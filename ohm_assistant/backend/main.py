@@ -170,8 +170,8 @@ loadCfg();loadBills();verify();
 </body></html>"""
 
 
-@app.get("/", response_class=HTMLResponse)
-async def home() -> str:
+@app.get("/dev", response_class=HTMLResponse)
+async def dev_console() -> str:
     return DEV_PAGE
 
 

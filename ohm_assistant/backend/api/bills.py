@@ -1,14 +1,19 @@
 """Bills CRUD API. Ripartition computation arrives in M3."""
-from fastapi import APIRouter, Depends, HTTPException
+import shutil
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..core import engine, snapshot
-from ..db import get_db
+from ..db import DATA_DIR, get_db
 from .config import get_or_create
 
 router = APIRouter(prefix="/api/bills", tags=["bills"])
+PDF_DIR = DATA_DIR / "pdfs"
 
 
 def _get(db: Session, bill_id: int) -> models.Bill:
@@ -79,3 +84,25 @@ def compute_bill(bill_id: int, persist: bool = True, db: Session = Depends(get_d
         db.commit()
     res["deltas"] = {k: (v["value"] if v else None) for k, v in deltas.items()}
     return res
+
+
+@router.post("/{bill_id}/pdf")
+def upload_pdf(bill_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Attach the original bill PDF (stored under /data/pdfs)."""
+    bill = _get(db, bill_id)
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+    dest = PDF_DIR / f"bill_{bill_id}.pdf"
+    with open(dest, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    bill.pdf_path = str(dest)
+    db.commit()
+    return {"pdf_path": bill.pdf_path}
+
+
+@router.get("/{bill_id}/pdf")
+def get_pdf(bill_id: int, db: Session = Depends(get_db)):
+    bill = _get(db, bill_id)
+    if not bill.pdf_path or not Path(bill.pdf_path).exists():
+        raise HTTPException(404, "nessun PDF allegato")
+    return FileResponse(bill.pdf_path, media_type="application/pdf",
+                        filename=f"bolletta_{bill_id}.pdf")

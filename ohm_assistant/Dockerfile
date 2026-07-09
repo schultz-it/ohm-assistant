@@ -8,6 +8,7 @@ COPY backend/requirements.txt .
 RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
 COPY backend/ /app/backend/
+COPY frontend/dist/ /app/frontend/dist/
 COPY rootfs /
 
 RUN chmod a+x /etc/services.d/ohm_assistant/run

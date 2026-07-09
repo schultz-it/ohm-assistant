@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0
+- Web UI (Milestone 4/5): mobile-first Preact + Tailwind SPA with a bottom tab
+  bar (Bollette · Storico · Live · Setup), served at the panel root; the dev
+  console moves to `/dev`.
+  - **Bollette**: add a bill, `Calcola` the split (with a one-tap "import HA
+    history & recompute" when snapshots are missing for the period), attach/open
+    the PDF, and expand the full breakdown (L, S, quote Zenner, prezzo,
+    diagnostica).
+  - **Setup**: unit names, canone RAI default, and the editable HA entity map
+    with live verify per sensor.
+  - Storico and Live tabs are placeholders (M6/M7).
+- Attach the original bill PDF: `POST/GET /api/bills/{id}/pdf` (stored in /data).
+
 ## 0.4.0
 - Ripartition engine (Milestone 3): the SPEC 4 formulas. Electric — all on
   gross consumption so PV self-consumption never mixes bases: `L = prelievo +
