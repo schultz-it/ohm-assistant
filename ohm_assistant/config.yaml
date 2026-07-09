@@ -1,0 +1,25 @@
+name: Ohm Assistant
+version: "0.1.0"
+slug: ohm_assistant
+description: Ripartizione bollette luce e gas tra unità abitative, con contabilizzatori, Shelly e fotovoltaico.
+url: https://github.com/schultz-it/ohm-assistant
+arch:
+  - aarch64
+  - amd64
+init: false
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:scale-balance
+panel_title: Ohm Assistant
+hassio_api: true
+homeassistant_api: true
+options:
+  log_level: info
+  ai_provider: none
+  ai_api_key: ""
+  ai_model: ""
+schema:
+  log_level: list(debug|info|warning|error)
+  ai_provider: list(none|ha_conversation|anthropic|openai)
+  ai_api_key: str?
+  ai_model: str?

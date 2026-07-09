@@ -1,0 +1,31 @@
+name: Build add-on images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      # armv7 (32-bit) was dropped by Home Assistant and its builder in 2026.
+      matrix:
+        arch: [aarch64, amd64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.arch }} add-on
+        uses: home-assistant/builder@master
+        with:
+          # --test builds locally without pushing; --image/--docker-hub only
+          # provide a valid tag name (the builder fails on an empty image name).
+          args: |
+            --${{ matrix.arch }} \
+            --target ohm_assistant \
+            --image "ohm-assistant-{arch}" \
+            --docker-hub "ghcr.io/schultz-it" \
+            --test
