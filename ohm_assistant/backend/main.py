@@ -12,8 +12,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401  (registers ORM models on Base)
-from .api import bills, config, ha
+from .api import bills, config, ha, snapshots
 from .api.config import get_or_create
+from .core import ha as ha_core
+from .core import scheduler as sched
+from .core import snapshot
 from .db import Base, SessionLocal, apply_migrations, engine
 
 
@@ -23,13 +26,22 @@ async def lifespan(app: FastAPI):
     apply_migrations()
     with SessionLocal() as db:
         get_or_create(db)  # ensure the singleton config row exists
+        # Take one snapshot at startup so a period always has a baseline point.
+        if ha_core.has_token():
+            try:
+                snapshot.take_snapshot(db)
+            except Exception:  # noqa: BLE001 — startup must not fail on HA hiccups
+                pass
+    sched.init()
     yield
+    sched.shutdown()
 
 
 app = FastAPI(title="Ohm Assistant", lifespan=lifespan)
 app.include_router(config.router)
 app.include_router(bills.router)
 app.include_router(ha.router)
+app.include_router(snapshots.router)
 
 
 @app.get("/api/health")
@@ -79,9 +91,17 @@ DEV_PAGE = """<!doctype html><html><head><meta charset="utf-8">
 </p>
 <div id="blist">…</div>
 
+<h3>Contatori (snapshot &amp; delta)</h3>
+<p><button onclick="snap()">Snapshot ora</button> <span id="smsg" class="muted"></span></p>
+<p><label>Delta dal <input id="dfrom" type="date"></label>
+   <label>al <input id="dto" type="date"></label>
+   <button onclick="delta()">Calcola delta</button></p>
+<div id="dres"></div>
+
 <h3>Diagnostica</h3>
 <p><a href="api/health">health</a> · <a href="api/config">config</a> ·
-   <a href="api/bills">bills</a> · <a href="api/ha/verify">verify</a></p>
+   <a href="api/bills">bills</a> · <a href="api/ha/verify">verify</a> ·
+   <a href="api/snapshots">snapshots</a></p>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -112,6 +132,18 @@ function addBill(){$('bmsg').textContent='…';
   .then(r=>{if(!r.ok)throw r.status;return r.json();})
   .then(()=>{$('bmsg').textContent='ok';loadBills();}).catch(e=>$('bmsg').textContent='err '+e);}
 function delBill(id){fetch('api/bills/'+id,{method:'DELETE'}).then(loadBills);}
+function snap(){$('smsg').textContent='…';
+  fetch('api/snapshots/now',{method:'POST'}).then(r=>r.json())
+  .then(d=>{$('smsg').innerHTML='<span class="ok">salvati '+d.stored+'</span>'+
+    (d.skipped?' · <span class="ko">saltati '+d.skipped+'</span>':'');})
+  .catch(e=>$('smsg').innerHTML='<span class="ko">err '+e+'</span>');}
+function delta(){$('dres').textContent='…';
+  fetch('api/snapshots/delta?from_='+$('dfrom').value+'&to='+$('dto').value).then(r=>r.json())
+  .then(d=>{$('dres').innerHTML='<table><tr><th>Chiave</th><th>Δ periodo</th><th>punti</th></tr>'+
+    Object.entries(d.deltas).map(([k,v])=>'<tr><td>'+k+'</td><td>'+
+      (v? '<span class=ok>'+v.value+'</span>':'<span class=ko>dati insuff.</span>')+
+      '</td><td>'+(v?v.points:'-')+'</td></tr>').join('')+'</table>';})
+  .catch(e=>$('dres').innerHTML='<span class="ko">err '+e+'</span>');}
 loadCfg();loadBills();verify();
 </script>
 </body></html>"""

@@ -32,6 +32,17 @@ async def states_by_id() -> dict[str, dict]:
     return {s["entity_id"]: s for s in await all_states()}
 
 
+def all_states_sync() -> list[dict]:
+    """Blocking variant, used by the snapshot scheduler job (runs in a thread)."""
+    resp = httpx.get(f"{SUPERVISOR}/states", headers=_headers(), timeout=TIMEOUT)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def states_by_id_sync() -> dict[str, dict]:
+    return {s["entity_id"]: s for s in all_states_sync()}
+
+
 async def get_state(entity_id: str) -> dict | None:
     """A single entity state, or None if HA doesn't know it (404)."""
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+- Snapshot engine (Milestone 2): APScheduler daily job (00:05 UTC) that stores
+  a reading of every cumulative meter (Zenner, Shelly, PV), plus one snapshot
+  at add-on startup so a period always has a baseline point.
+- Period-delta computation with meter-reset handling (a decrease counts the new
+  reading), used later by the ripartition engine.
+- API: `POST /api/snapshots/now`, `GET /api/snapshots`, `GET /api/snapshots/delta`
+  (deltas for every calc key over a period), `POST /api/snapshots/manual`
+  (bootstrap past billing periods by hand).
+- Dev console: snapshot button + period-delta tester.
+
 ## 0.2.0
 - Data layer (Milestone 1): SQLite in `/data`, SQLAlchemy models for config,
   bills and daily meter snapshots.
