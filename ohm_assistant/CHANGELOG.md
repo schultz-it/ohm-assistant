@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+- Live dashboard (Milestone 7): the Live tab shows the instantaneous heat-cost-
+  allocator readings for both units side by side (mandata, ritorno, ΔT, potenza
+  termica, flusso), the total thermal power with an instantaneous heat-split bar
+  (by thermal power), and the PV load power. Auto-refreshes every 5 s.
+- New `GET /api/live` reading the configured instant sensors via the Supervisor.
+
 ## 0.5.0
 - Web UI (Milestone 4/5): mobile-first Preact + Tailwind SPA with a bottom tab
   bar (Bollette · Storico · Live · Setup), served at the panel root; the dev
