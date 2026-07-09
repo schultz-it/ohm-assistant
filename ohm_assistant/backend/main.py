@@ -93,9 +93,11 @@ DEV_PAGE = """<!doctype html><html><head><meta charset="utf-8">
 
 <h3>Contatori (snapshot &amp; delta)</h3>
 <p><button onclick="snap()">Snapshot ora</button> <span id="smsg" class="muted"></span></p>
-<p><label>Delta dal <input id="dfrom" type="date"></label>
+<p><label>dal <input id="dfrom" type="date"></label>
    <label>al <input id="dto" type="date"></label>
-   <button onclick="delta()">Calcola delta</button></p>
+   <button onclick="delta()">Calcola delta</button>
+   <button onclick="importHist()">Importa storico HA</button>
+   <span id="imsg" class="muted"></span></p>
 <div id="dres"></div>
 
 <h3>Diagnostica</h3>
@@ -121,10 +123,29 @@ function verify(){$('vsum').textContent='…';
       :'<tr><td><code>'+e.entity_id+'</code></td><td><span class="ko">non trovato</span></td></tr>').join('')+'</table>';
   }).catch(e=>$('vsum').innerHTML='<span class="ko">errore: '+e+'</span>');}
 function loadBills(){fetch('api/bills').then(r=>r.json()).then(bs=>{
-  $('blist').innerHTML= bs.length? '<table><tr><th>Tipo</th><th>Periodo</th><th>Q.tà</th><th>€</th><th></th></tr>'+
+  $('blist').innerHTML= bs.length? '<table><tr><th>Tipo</th><th>Periodo</th><th>Q.tà</th><th>€</th><th>Andrea</th><th>Genitori</th><th></th></tr>'+
     bs.map(b=>'<tr><td>'+b.type+'</td><td>'+b.period_start+' → '+b.period_end+'</td><td>'+b.billed+
-      '</td><td>'+b.cost_total+'</td><td><button onclick="delBill('+b.id+')">✕</button></td></tr>').join('')+'</table>'
+      '</td><td>'+b.cost_total+'</td><td>'+(b.andrea_amount!=null?'€'+b.andrea_amount:'-')+
+      '</td><td>'+(b.genitori_amount!=null?'€'+b.genitori_amount:'-')+
+      '</td><td><button onclick="computeBill('+b.id+')">Calcola</button> '+
+      '<button onclick="delBill('+b.id+')">✕</button></td></tr>').join('')+'</table>'
     : '<p class="muted">nessuna bolletta</p>';});}
+function computeBill(id){
+  fetch('api/bills/'+id+'/compute',{method:'POST'}).then(r=>r.json()).then(res=>{
+    if(res.ok){ loadBills();
+      alert('Andrea €'+res.andrea_amount+'  ·  Genitori €'+res.genitori_amount+
+        '\\nf_Andrea '+res.f_andrea+(res.warnings&&res.warnings.length?'\\n⚠ '+res.warnings.join('; '):''));
+    } else if(res.missing){
+      alert('Dati mancanti per il periodo: '+res.missing.join(', ')+
+        '\\nUsa \"Importa storico HA\" con le date della bolletta.');
+    } else { alert('Errore: '+(res.error||'sconosciuto')); }
+  }).catch(e=>alert('err '+e));}
+function importHist(){$('imsg').textContent='importo…';
+  fetch('api/snapshots/import_history?from_='+$('dfrom').value+'&to='+$('dto').value,{method:'POST'})
+  .then(r=>r.json()).then(d=>{ if(d.detail){
+      $('imsg').innerHTML='<span class="ok">'+d.keys_imported+'/'+d.keys_total+' sensori importati</span>';
+    } else { $('imsg').innerHTML='<span class="ko">'+(d.detail||JSON.stringify(d))+'</span>'; }})
+  .catch(e=>$('imsg').innerHTML='<span class="ko">err '+e+'</span>');}
 function addBill(){$('bmsg').textContent='…';
   fetch('api/bills',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({type:$('btype').value,period_start:$('bstart').value,period_end:$('bend').value,

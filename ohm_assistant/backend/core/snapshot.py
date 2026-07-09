@@ -70,17 +70,26 @@ def take_snapshot(db: Session, day: date | None = None) -> dict:
 def period_delta(db: Session, entity_id: str, d0: date, d1: date) -> dict | None:
     """Consumption of a cumulative sensor over [d0, d1] from stored snapshots.
 
-    Returns None when there aren't at least two snapshots in range (needs
-    bootstrap / manual entry). Meter resets (a decrease) are handled by counting
-    the new reading rather than a negative delta.
+    The baseline is the reading just *before* d0 (so the whole period is
+    captured); the end is the last reading within the period. Returns None when
+    fewer than two points are available (needs import / manual entry). Meter
+    resets (a decrease) are handled by counting the new reading.
     """
-    rows = db.scalars(
+    rows_in = db.scalars(
         select(models.MeterSnapshot)
         .where(models.MeterSnapshot.entity_id == entity_id,
                models.MeterSnapshot.date >= d0,
                models.MeterSnapshot.date <= d1)
         .order_by(models.MeterSnapshot.date)
     ).all()
+    baseline = db.scalar(
+        select(models.MeterSnapshot)
+        .where(models.MeterSnapshot.entity_id == entity_id,
+               models.MeterSnapshot.date < d0)
+        .order_by(models.MeterSnapshot.date.desc())
+        .limit(1)
+    )
+    rows = ([baseline] if baseline is not None else []) + list(rows_in)
     if len(rows) < 2:
         return None
 

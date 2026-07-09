@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
-from ..core import snapshot
+from ..core import history, snapshot
 from ..db import get_db
 from ..entities import merged_map
 from .config import get_or_create
@@ -52,6 +52,21 @@ def deltas(from_: date, to: date, db: Session = Depends(get_db)):
     cfg = get_or_create(db)
     return {"from": from_.isoformat(), "to": to.isoformat(),
             "deltas": snapshot.period_deltas(db, cfg, from_, to)}
+
+
+@router.post("/import_history")
+async def import_history(from_: date, to: date, db: Session = Depends(get_db)):
+    """Backfill snapshots for a past period from HA long-term statistics."""
+    if to < from_:
+        raise HTTPException(422, "to before from")
+    cfg = get_or_create(db)
+    try:
+        summary = await history.import_period(db, cfg, from_, to)
+    except Exception as e:  # noqa: BLE001 — surface the reason to the UI
+        raise HTTPException(502, f"import da storico HA fallito: {e}")
+    imported = sum(1 for v in summary.values() if v["available"])
+    return {"from": from_.isoformat(), "to": to.isoformat(),
+            "keys_imported": imported, "keys_total": len(summary), "detail": summary}
 
 
 @router.post("/manual")

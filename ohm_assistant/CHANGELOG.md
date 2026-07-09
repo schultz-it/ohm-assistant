@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+- Ripartition engine (Milestone 3): the SPEC 4 formulas. Electric — all on
+  gross consumption so PV self-consumption never mixes bases: `L = prelievo +
+  autoconsumo`, `S = L − appartamento`, split `S` by Zenner heat quotas, canone
+  RAI 100% to Andrea, PV benefit shared; plus diagnostics (prelievo vs billed,
+  production vs export+self, unmetered load). Gas — Smc split by Zenner quotas.
+- `POST /api/bills/{id}/compute`: computes who pays what from the period deltas,
+  stores the full breakdown, or reports which sensors are missing for the period.
+- History import (Milestone 3): `POST /api/snapshots/import_history` backfills a
+  past period's snapshots from HA long-term statistics over the WebSocket API —
+  so you can split a bill from before the add-on was installed (e.g. June).
+- Dev console: per-bill "Calcola" + "Importa storico HA".
+
 ## 0.3.0
 - Snapshot engine (Milestone 2): APScheduler daily job (00:05 UTC) that stores
   a reading of every cumulative meter (Zenner, Shelly, PV), plus one snapshot
