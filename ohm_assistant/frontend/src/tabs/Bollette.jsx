@@ -20,6 +20,9 @@ export function Bollette() {
   const [busy, setBusy] = useState(null);
   const [open, setOpen] = useState(null);
   const [err, setErr] = useState("");
+  const [ai, setAi] = useState({ available: false });
+  const [extracting, setExtracting] = useState(false);
+  const [pendingPdf, setPendingPdf] = useState(null);
 
   const load = () => get("api/bills").then(setBills).catch((e) => setErr(e.message));
   useEffect(() => {
@@ -28,7 +31,29 @@ export function Bollette() {
       setCfg(c);
       setForm((f) => ({ ...f, canone_rai: c.canone_rai_default || "" }));
     });
+    get("api/ai/status").then(setAi).catch(() => {});
   }, []);
+
+  async function extractFromPdf(e) {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setErr(""); setExtracting(true);
+    try {
+      const r = await upload("api/ai/extract", file);
+      setForm({
+        type: r.type || "electric",
+        period_start: r.period_start || "",
+        period_end: r.period_end || "",
+        billed: r.billed ?? "",
+        cost_total: r.cost_total ?? "",
+        canone_rai: r.canone_rai ?? "",
+        notes: "",
+      });
+      setPendingPdf(file);   // attached to the bill once saved
+    } catch (e2) { setErr("AI: " + e2.message); }
+    setExtracting(false);
+  }
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
@@ -36,15 +61,17 @@ export function Bollette() {
     e.preventDefault();
     setErr("");
     try {
-      await post("api/bills", {
+      const created = await post("api/bills", {
         type: form.type,
         period_start: form.period_start,
         period_end: form.period_end,
         billed: parseFloat(form.billed),
         cost_total: parseFloat(form.cost_total),
         canone_rai: parseFloat(form.canone_rai) || 0,
+        source: pendingPdf ? "ai" : "manual",
         notes: form.notes || null,
       });
+      if (pendingPdf) { await upload(`api/bills/${created.id}/pdf`, pendingPdf); setPendingPdf(null); }
       setForm({ ...emptyForm(), canone_rai: cfg.canone_rai_default || "" });
       load();
     } catch (e2) { setErr(e2.message); }
@@ -83,7 +110,21 @@ export function Bollette() {
   return (
     <div class="space-y-4">
       <form class={card + " space-y-2"} onSubmit={add}>
-        <div class="font-semibold">Nuova bolletta</div>
+        <div class="flex items-center justify-between">
+          <div class="font-semibold">Nuova bolletta</div>
+          {ai.available && (
+            <label class={btn + " cursor-pointer"}>
+              {extracting ? "Estrazione…" : "📄 Compila da PDF"}
+              <input type="file" accept="application/pdf" class="hidden"
+                     onChange={extractFromPdf} disabled={extracting} />
+            </label>
+          )}
+        </div>
+        {pendingPdf && (
+          <div class="text-xs text-emerald-600">
+            📎 PDF pronto ({pendingPdf.name}) — verrà allegato al salvataggio. Rivedi i campi.
+          </div>
+        )}
         <div class="grid grid-cols-2 gap-2">
           <div>
             <div class={lbl}>Tipo</div>

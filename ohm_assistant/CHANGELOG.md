@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0
+- AI PDF extraction (Milestone 5): upload the bill PDF and the configured AI
+  provider (OpenAI/Anthropic, key in add-on options) fills in type, period,
+  billed kWh/Smc, total cost and canone RAI — always a proposal you review
+  before saving, and the PDF is attached to the bill on save.
+- New `GET /api/ai/status`, `POST /api/ai/extract`; text extracted locally with
+  pypdf, provider called for strict JSON. Scanned (image-only) PDFs are
+  reported so you can enter the data by hand.
+
 ## 0.7.0
 - Storico dashboard (Milestone 6): totals per unit, a stacked bar chart of each
   bill's cost split (Andrea/Genitori), and per-bill €/kWh.
