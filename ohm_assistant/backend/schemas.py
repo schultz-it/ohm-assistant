@@ -44,6 +44,7 @@ class BillUpdate(BaseModel):
     cost_total: float | None = None
     canone_rai: float | None = None
     status: str | None = None
+    settled: bool | None = None
     notes: str | None = None
 
 
@@ -58,6 +59,7 @@ class BillOut(BaseModel):
     canone_rai: float
     source: str
     status: str
+    settled: bool
     notes: str | None
     pdf_path: str | None
     created_at: datetime

@@ -34,6 +34,7 @@ class Bill(Base):
     canone_rai: Mapped[float] = mapped_column(default=0.0)  # electric only
     source: Mapped[str] = mapped_column(default="manual")   # manual | ai
     status: Mapped[str] = mapped_column(default="draft")    # draft | final
+    settled: Mapped[bool] = mapped_column(default=False)    # Genitori reimbursed?
     notes: Mapped[str | None] = mapped_column(default=None)
     pdf_path: Mapped[str | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

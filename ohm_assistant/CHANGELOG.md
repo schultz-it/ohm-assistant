@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+- Storico dashboard (Milestone 6): totals per unit, a stacked bar chart of each
+  bill's cost split (Andrea/Genitori), and per-bill €/kWh.
+- Cumulative balance: "Genitori owe Andrea €X" over the unsettled computed
+  bills, with a per-bill "Saldato" toggle. New `settled` flag on bills
+  (auto-migrated) and `GET /api/stats/summary`.
+
 ## 0.6.0
 - Live dashboard (Milestone 7): the Live tab shows the instantaneous heat-cost-
   allocator readings for both units side by side (mandata, ritorno, ΔT, potenza

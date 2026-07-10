@@ -37,7 +37,9 @@ def get_db():
 # Columns added after a table first shipped: (table, column, DDL type+default).
 # SQLite's create_all() does not ALTER existing tables, so upgrades need these
 # applied manually at startup (idempotent).
-_MIGRATIONS: list[tuple[str, str, str]] = []
+_MIGRATIONS: list[tuple[str, str, str]] = [
+    ("bills", "settled", "BOOLEAN DEFAULT 0"),
+]
 
 
 def apply_migrations() -> None:
