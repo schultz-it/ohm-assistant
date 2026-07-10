@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 🎉
+- Prima release stabile.
+- Riepilogo bolletta stampabile/condivisibile: `GET /api/bills/{id}/report`
+  (pagina self-contained) + pulsante "Riepilogo" sulle bollette calcolate.
+- Documentazione in-app completa (DOCS.md): modello di calcolo, setup, come
+  dividere una bolletta, storico/saldo, live, AI, bollette storiche, privacy,
+  troubleshooting.
+- README aggiornato; CI su actions/checkout@v5.
+
 ## 0.8.0
 - AI PDF extraction (Milestone 5): upload the bill PDF and the configured AI
   provider (OpenAI/Anthropic, key in add-on options) fills in type, period,

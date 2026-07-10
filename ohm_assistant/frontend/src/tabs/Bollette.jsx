@@ -199,6 +199,8 @@ export function Bollette() {
               <input type="file" accept="application/pdf" class="hidden" onChange={(e) => pickPdf(b, e)} />
             </label>
             {b.pdf_path && <a class={btn} href={`api/bills/${b.id}/pdf`} target="_blank">Apri PDF</a>}
+            {b.andrea_amount != null &&
+              <a class={btn} href={`api/bills/${b.id}/report`} target="_blank">Riepilogo</a>}
             {b.breakdown && (
               <button class={btn} onClick={() => setOpen(open === b.id ? null : b.id)}>Dettaglio</button>
             )}

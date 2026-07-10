@@ -7,7 +7,8 @@ Ohm Assistant è un **add-on** di Home Assistant che ripartisce le bollette **lu
 di uno Shelly Pro 3EM e dell'inverter fotovoltaico. Tiene lo storico bolletta-per-bolletta
 in una dashboard e mostra un cruscotto live dei contabilizzatori.
 
-**Stato: 🚧 in sviluppo (M0 — scaffold).** La specifica completa è in [SPEC.md](SPEC.md).
+**Stato: ✅ 1.0 rilasciata.** La documentazione completa è nell'add-on (tab
+Documentazione / [DOCS.md](ohm_assistant/DOCS.md)); la specifica è in [SPEC.md](SPEC.md).
 
 ## Installazione
 
@@ -26,7 +27,16 @@ Clicca il badge, oppure manualmente:
   Andrea. Il fotovoltaico è gestito sul consumo lordo, così il beneficio dell'autoconsumo è
   condiviso in proporzione ai consumi.
 - Dalla bolletta **gas**: gli Smc si dividono per le stesse quote Zenner.
-- Storico, dashboard dei costi e cruscotto live dei contabilizzatori.
+
+## Funzionalità
+
+- **Bollette**: inserimento manuale o **estrazione AI dal PDF** (OpenAI/Anthropic),
+  calcolo della ripartizione, allegato PDF, riepilogo stampabile.
+- **Storico**: totali per unità, grafico dello split per bolletta, €/kWh e
+  **saldo cumulativo** con spunta "saldato".
+- **Live**: contabilizzatori Andrea/Genitori in tempo reale + fotovoltaico.
+- **Setup**: mappa sensori editabile con verifica, nomi unità, canone RAI, AI.
+- **Bollette storiche**: import dei consumi dallo storico long-term di HA.
 
 Dettaglio del modello di calcolo: [SPEC.md](SPEC.md).
 

@@ -2,8 +2,10 @@
 import shutil
 from pathlib import Path
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -106,3 +108,58 @@ def get_pdf(bill_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "nessun PDF allegato")
     return FileResponse(bill.pdf_path, media_type="application/pdf",
                         filename=f"bolletta_{bill_id}.pdf")
+
+
+def _eur(n) -> str:
+    return "—" if n is None else "€ " + f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+@router.get("/{bill_id}/report", response_class=HTMLResponse)
+def report(bill_id: int, db: Session = Depends(get_db)):
+    """Self-contained printable ripartition summary, shareable with the family."""
+    bill = _get(db, bill_id)
+    cfg = get_or_create(db)
+    if bill.andrea_amount is None:
+        return HTMLResponse("<p style='font-family:sans-serif'>Bolletta non ancora "
+                            "calcolata. Premi «Calcola» prima di stampare.</p>")
+    bd = bill.breakdown or {}
+    unit = "Smc" if bill.type == "gas" else "kWh"
+    kind = "Gas" if bill.type == "gas" else "Luce"
+
+    rows = [("Periodo", f"{bill.period_start} → {bill.period_end}"),
+            (f"{kind} fatturati", f"{bill.billed} {unit}"),
+            ("Costo totale", _eur(bill.cost_total))]
+    if bill.type == "electric":
+        rows.append(("Canone RAI (→ %s)" % cfg.andrea_name, _eur(bill.canone_rai)))
+        if bd.get("price_eur_kwh") is not None:
+            rows.append(("Prezzo medio", f"€ {bd['price_eur_kwh']}/kWh"))
+    rows.append(("Quota calore Andrea (Zenner)", f"{round((bill.f_andrea or 0) * 100)}%"))
+
+    detail = "".join(f"<tr><td>{k}</td><td style='text-align:right'>{v}</td></tr>" for k, v in rows)
+    return HTMLResponse(f"""<!doctype html><html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Riepilogo bolletta</title>
+<style>
+ body{{font-family:system-ui,sans-serif;max-width:38rem;margin:2rem auto;padding:0 1rem;color:#111}}
+ h1{{font-size:1.3rem}} .sub{{color:#666;margin-top:-.4rem}}
+ .split{{display:flex;gap:1rem;margin:1.4rem 0}}
+ .box{{flex:1;text-align:center;border-radius:.8rem;padding:1rem}}
+ .a{{background:#fef3c7}} .g{{background:#e0f2fe}}
+ .amt{{font-size:1.8rem;font-weight:700}} .a .amt{{color:#b45309}} .g .amt{{color:#0369a1}}
+ table{{width:100%;border-collapse:collapse;font-size:.92rem}}
+ td{{padding:.35rem .2rem;border-bottom:1px solid #eee}}
+ .foot{{color:#888;font-size:.8rem;margin-top:1.5rem}}
+ button{{padding:.5rem 1rem;border:1px solid #ccc;border-radius:.5rem;background:#f7f7f7;cursor:pointer}}
+ @media print{{button{{display:none}}}}
+</style></head><body>
+<h1>⚡ Ripartizione bolletta {kind}</h1>
+<p class="sub">{bill.period_start} → {bill.period_end}</p>
+<div class="split">
+  <div class="box a"><div>{cfg.andrea_name}</div><div class="amt">{_eur(bill.andrea_amount)}</div>
+    <div style="color:#666">{bill.andrea_qty} {unit}</div></div>
+  <div class="box g"><div>{cfg.genitori_name}</div><div class="amt">{_eur(bill.genitori_amount)}</div>
+    <div style="color:#666">{bill.genitori_qty} {unit}</div></div>
+</div>
+<table>{detail}</table>
+<p class="foot">Generato il {date.today().isoformat()} da Ohm Assistant.</p>
+<button onclick="window.print()">Stampa / Salva PDF</button>
+</body></html>""")
