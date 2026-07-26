@@ -15,6 +15,95 @@ const METRICS = [
 const fmt = (r) =>
   !r || !r.available ? "—" : `${(+r.value).toLocaleString("it-IT", { maximumFractionDigits: 2 })} ${r.unit}`;
 
+const UNIT_COLOR = {
+  andrea: "text-amber-600 dark:text-amber-400",
+  genitori: "text-sky-600 dark:text-sky-400",
+  comune: "text-gray-500",
+};
+const SEASON_ICON = { riscaldamento: "🔥", raffrescamento: "❄️" };
+
+// Eurotherm Smart365: zone climatiche lette via Modbus TCP dal regolatore.
+function Eurotherm({ eu, names }) {
+  if (!eu || !eu.enabled) return null;
+  if (eu.error)
+    return (
+      <div class={card + " text-sm"}>
+        <div class="font-semibold mb-1">🏠 Clima Eurotherm</div>
+        <div class="text-red-600 text-xs">Regolatore non raggiungibile: {eu.error}</div>
+      </div>
+    );
+
+  const sys = eu.system || {};
+  const season = sys.season?.text;
+
+  return (
+    <div class="space-y-3">
+      <div class={card + " space-y-2"}>
+        <div class="flex items-center justify-between">
+          <div class="font-semibold">🏠 Clima Eurotherm</div>
+          <div class="text-sm">
+            {season && <span class="mr-2">{SEASON_ICON[season] || "🌡️"} {season}</span>}
+            {sys.presence?.available && (
+              <span class="text-xs text-gray-500">· {sys.presence.text}</span>
+            )}
+          </div>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class={lbl}>🌤️ Temperatura esterna</span>
+          <span class="font-medium tabular-nums">{fmt(sys.external_temp)}</span>
+        </div>
+        {sys.air_boost?.value ? (
+          <div class="text-xs text-emerald-600">💨 boost aria attivo</div>
+        ) : null}
+      </div>
+
+      {eu.zones.length === 0 ? (
+        <div class={card + " text-xs text-gray-500"}>
+          Nessuna zona configurata — usa “Cerca zone” nel tab Setup.
+        </div>
+      ) : (
+        <div class="grid grid-cols-2 gap-3">
+          {eu.zones.map((z) => {
+            const r = z.readings;
+            return (
+              <div class={card} key={z.index}>
+                <div class="flex items-baseline justify-between gap-1">
+                  <div class="font-medium truncate text-sm">{z.name}</div>
+                  {z.unit && (
+                    <div class={"text-[10px] shrink-0 " + (UNIT_COLOR[z.unit] || "")}>
+                      {z.unit === "comune" ? "comune" : names[z.unit] || z.unit}
+                    </div>
+                  )}
+                </div>
+                <div class="text-2xl font-semibold tabular-nums mt-1">
+                  {r.temperature.available
+                    ? r.temperature.value.toLocaleString("it-IT", { minimumFractionDigits: 1 })
+                    : "—"}
+                  <span class="text-sm text-gray-500"> °C</span>
+                </div>
+                <div class="mt-1 space-y-1">
+                  <div class="flex justify-between">
+                    <span class={lbl}>🎯 Setpoint</span>
+                    <span class="text-sm tabular-nums">{fmt(r.setpoint)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class={lbl}>💧 Umidità</span>
+                    <span class="text-sm tabular-nums">{fmt(r.humidity)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class={lbl}>⚙️ Modo</span>
+                    <span class="text-sm">{r.mode.available ? r.mode.text : "—"}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function Live() {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
@@ -84,6 +173,8 @@ export function Live() {
         <span class={lbl}>☀️ Potenza di carico FV</span>
         <span class="text-sm font-medium tabular-nums">{fmt(d.pv.load_power)}</span>
       </div>
+
+      <Eurotherm eu={d.eurotherm} names={d.names} />
 
       <div class="text-center text-xs text-gray-400">
         {err ? <span class="text-red-500">errore aggiornamento</span>

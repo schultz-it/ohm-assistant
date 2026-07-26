@@ -15,6 +15,27 @@ class ConfigOut(BaseModel):
     entity_map: dict  # effective map (defaults + overrides), key -> entity_id
 
 
+class EurothermZone(BaseModel):
+    index: int = Field(ge=1, le=64)
+    name: str = ""
+    enabled: bool = True
+    unit: str | None = Field(default=None, pattern="^(andrea|genitori|comune)$")
+
+
+class EurothermConfig(BaseModel):
+    """Modbus TCP settings for the Eurotherm Smart365 regulator."""
+    enabled: bool | None = None
+    host: str | None = None
+    port: int | None = Field(default=None, ge=1, le=65535)
+    unit_id: int | None = Field(default=None, ge=0, le=247)
+    input_type: str | None = Field(default=None, pattern="^(holding|input)$")
+    timeout: float | None = Field(default=None, gt=0, le=60)
+    poll_interval: int | None = Field(default=None, ge=5, le=3600)
+    zone_base: int | None = Field(default=None, ge=0, le=65535)
+    zone_stride: int | None = Field(default=None, ge=1, le=65535)
+    zones: list[EurothermZone] | None = None
+
+
 class ConfigUpdate(BaseModel):
     andrea_name: str | None = None
     genitori_name: str | None = None

@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0
+- **Clima Eurotherm nei dati live**: il regolatore Smart365 / SmartComfort365
+  viene letto direttamente via **Modbus TCP** (sola lettura, nessuna scrittura di
+  setpoint o modalità) e le sue zone compaiono nella tab **Live** insieme a
+  stagione, presenza e temperatura esterna.
+- Setup: pannello *Clima Eurotherm* con IP/porta/unit id, intervallo di
+  aggiornamento, **Prova connessione**, **Cerca zone** (sonda gli slot e propone
+  quelle che rispondono), nome per zona e assegnazione opzionale a un'unità
+  abitativa. Mappa dei registri (base 1200, passo 400, +5/+6/+8/+9 e i registri
+  di sistema 58/101/102/103) modificabile per impianti cablati diversamente.
+- Client Modbus TCP interno (FC3/FC4, nessuna dipendenza aggiuntiva), letture in
+  blocchi contigui e cache TTL pari all'intervallo configurato: la tab Live si
+  aggiorna ogni 5 s senza sovraccaricare il bus. Regolatore irraggiungibile o
+  disabilitato non compromette mai il resto del cruscotto.
+- API: `GET/PUT /api/eurotherm/config`, `GET /api/eurotherm/live`,
+  `POST /api/eurotherm/test`, `POST /api/eurotherm/scan`,
+  `GET /api/eurotherm/registers`; blocco `eurotherm` aggiunto a `GET /api/live`.
+- Le letture Eurotherm sono diagnostiche: la ripartizione delle bollette resta
+  basata sulle quote di calore Zenner.
+
 ## 1.0.0 🎉
 - Prima release stabile.
 - Riepilogo bolletta stampabile/condivisibile: `GET /api/bills/{id}/report`

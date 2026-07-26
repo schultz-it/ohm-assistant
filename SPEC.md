@@ -164,6 +164,26 @@ Provider da opzioni add-on (default OpenAI, come Petrichor). PDF → JSON strutt
 rivedibile**, fallback all'inserimento manuale. L'AI non calcola le ripartizioni, solo
 estrae i dati di input.
 
+## 8bis. Clima Eurotherm via Modbus TCP (v1.1)
+
+Il regolatore **Eurotherm Smart365 / SmartComfort365** non passa da HA: l'add-on
+lo interroga direttamente in **Modbus TCP** (client interno, FC3/FC4, sola
+lettura — nessuna scrittura di setpoint o modalità).
+
+Mappa di default (indirizzi di protocollo, base 0):
+- sistema: `58` temperatura esterna (×0,1 °C), `101` stagione (0 raffrescamento,
+  1 riscaldamento), `102` presenza (0 casa, 1 spento, 2 assente, 3 vacanza),
+  `103` boost aria;
+- zona N con `base = 1200 + (N−1)·400`: `base+5` temperatura (×0,1 °C),
+  `base+6` umidità (%), `base+8` setpoint (×0,1 °C), `base+9` modo.
+
+Base, passo, tipo di registri, IP/porta/unit id e intervallo di polling sono in
+`Config.eurotherm`, editabili dal Setup; **Cerca zone** sonda gli slot e propone
+quelli che rispondono con una temperatura plausibile. Le letture sono
+diagnostiche e **non entrano nel calcolo §4**: la chiave di ripartizione resta
+quella delle quote di calore Zenner. L'assegnazione zona → unità abitativa serve
+solo al raggruppamento nel cruscotto Live.
+
 ## 9. Idee extra
 - Riepilogo stampabile/PDF per bolletta da condividere coi Genitori.
 - Saldo cumulativo "Genitori devono ad Andrea €X" con segna-come-saldato.
