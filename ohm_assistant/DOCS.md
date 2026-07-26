@@ -70,52 +70,87 @@ La tab **Live** mostra in tempo reale (aggiornamento ogni 5s) mandata, ritorno,
 split istantaneo del calore e la potenza di carico del fotovoltaico.
 
 Se hai configurato il regolatore **Eurotherm** (sotto), in fondo alla tab
-compaiono anche stagione (riscaldamento/raffrescamento), presenza, temperatura
-esterna e una scheda per ogni zona con temperatura, setpoint, umidità e modo.
+compaiono stagione, modo zona, temperatura esterna e — per ogni **Smart Base** —
+mandata e setpoint di mandata, stato dei sensori, la macchina aria associata e
+le schede delle sue stanze (temperatura, obiettivo, umidità, punto di rugiada,
+modo, allarmi del sensore).
 
 ## Clima Eurotherm via Modbus (opzionale)
 
-Il regolatore **Eurotherm Smart365 / SmartComfort365** espone l'impianto su
-**Modbus TCP** (porta 502). Ohm Assistant lo legge direttamente, senza passare
-da Home Assistant, e **solo in lettura**: non scrive mai setpoint o modalità.
+Il regolatore **Eurotherm SmartComfort 365** espone l'impianto su **Modbus TCP**
+(porta 502, unit id 1 di default; il protocollo supporta anche RTU a 19200 8N1).
+Ohm Assistant lo legge direttamente, senza passare da Home Assistant, e **solo
+in lettura**: non scrive mai setpoint o modalità.
 
-In **Setup → Clima Eurotherm (Modbus TCP)**:
+Un solo SmartControl365 risponde per tutto l'impianto — stesso IP per tutte le
+Smart Base — e le parti si distinguono dagli indirizzi dei registri.
 
-1. spunta **attivo** e scrivi l'**indirizzo IP** del regolatore (porta 502,
-   unit/slave id 1 nella configurazione standard);
-2. **Prova connessione** — legge i registri di sistema e conferma che risponde;
-3. **Cerca zone** — sonda gli slot delle zone e propone quelle che rispondono;
-4. dai un **nome** a ogni zona e, se vuoi, assegnala a un'unità abitativa
-   (serve solo a raggrupparle nel Live: le letture Eurotherm **non entrano nel
-   calcolo della bolletta**, che resta basato sulle quote Zenner);
+### Come è fatto l'impianto
+
+Il protocollo organizza tutto su tre livelli:
+
+- **Zona** (sottosistema, fino a 8): stagione caldo/freddo, modo casa/assente/
+  vacanza, boost di rinnovo aria, e quali Smart Base ne fanno parte;
+- **Smart Base** (fino a 8, 8 stanze ciascuna): temperatura e setpoint di
+  mandata, tipo di base (con o senza miscelazione), numero di sensori collegati
+  e loro stato di errore;
+- **Stanza**: temperatura, umidità, **punto di rugiada**, temperatura
+  obiettivo, modo (automatico, manuale, party, early bird, buonanotte…),
+  temperatura manuale e la diagnostica del sensore (condensa, umidità alta con
+  raffrescamento inibito, batterie da sostituire…).
+
+### Configurazione
+
+In **Setup → Clima Eurotherm**:
+
+1. spunta **attivo** e scrivi l'**indirizzo IP** del regolatore;
+2. **Prova connessione** — legge il blocco di sistema e mostra temperatura
+   esterna e numero di zone;
+3. **Rileva impianto** — il regolatore dichiara la propria topologia (registro
+   59, mappa delle basi in ogni zona, id di base e stanza): l'add-on la percorre
+   e propone Smart Base e stanze realmente presenti;
+4. dai un **nome** a basi e stanze, scegli il **modello di macchina aria** di
+   ogni base e, se vuoi, assegna base o stanza a un'unità abitativa (serve solo
+   a raggruppare nel Live: le letture Eurotherm **non entrano nel calcolo della
+   bolletta**, che resta basato sulle quote Zenner);
 5. **Salva clima**.
 
 L'intervallo di **aggiornamento** (default 30 s) è quello con cui l'add-on
 interroga davvero il bus: la tab Live si aggiorna ogni 5 s ma riusa il dato in
 cache, così il regolatore non viene sovraccaricato.
 
-### Mappa dei registri
+### Mappa dei registri (rev. 05)
 
-Sotto **Mostra registri avanzati** puoi cambiare tutto se il tuo impianto è
-cablato diversamente. Il default è la mappa Smart365:
+| Blocco | Indirizzo | Contenuto |
+|---|---|---|
+| Sistema | 50–59 | seriale, data/ora, temperatura esterna (58), numero di zone (59) |
+| Zona i | 100 + i×130 | stagione (0 freddo, 1 caldo), modo zona, boost aria, mappa delle basi |
+| Smart Base b | 1140 + b×3260 | id base/zona, sensori, errori, tipo base, setpoint e temperatura di mandata |
+| Stanza r della base b | 1140 + b×3260 + 60 + r×400 | +5 temperatura, +6 umidità, +7 rugiada, +8 obiettivo, +9 modo, +10 temperatura manuale |
 
-| Registro | Contenuto |
-|---|---|
-| 58 | temperatura esterna (×0,1 °C) |
-| 101 | stagione: 0 = raffrescamento, 1 = riscaldamento |
-| 102 | presenza: 0 = casa, 1 = spento, 2 = assente, 3 = vacanza |
-| 103 | boost aria |
-| base + 5 | temperatura zona (×0,1 °C) |
-| base + 6 | umidità zona (%) |
-| base + 8 | setpoint zona (×0,1 °C) |
-| base + 9 | modo zona (0 = off, 1 = auto, 2 = manuale) |
+Le temperature sono in decimi di grado; i negativi sono scritti come
+65536 − valore. Con tre Smart Base gli indirizzi di partenza sono **1140**,
+**4400** e **7660**, e le rispettive stanze cominciano a **1200**, **4460** e
+**7720**.
 
-dove `base` della zona N = **1200 + (N−1) × 400** → zona 1 = 1200, zona 2 = 1600,
-zona 3 = 2000… I registri sono *holding* (function code 3); alcuni impianti li
-espongono come *input* (FC 4) e si cambia dallo stesso pannello.
+### Macchine aria (VMC)
 
-> Nota: gli indirizzi qui sono quelli del **protocollo** (base 0). I manuali
-> Eurotherm a volte li elencano a partire da 1: in quel caso sottrai 1.
+⚠️ Il protocollo rev. 05 **non pubblica registri per le Deuclima-VMC / SmartAir**:
+l'unico parametro dell'aria che espone è il **boost di rinnovo** a livello di
+zona (registro 103 + offset). Il modello della macchina associata a ogni base è
+quindi solo un'etichetta.
+
+Per andare oltre c'è **🔎 Esplora registri**: legge un intervallo di indirizzi,
+mostra ogni registro che risponde (valore, ×0,1, indirizzo, e l'etichetta se il
+manuale lo documenta) ed evidenzia quelli **cambiati** dall'ultima lettura — il
+modo pratico per capire quale registro segue una grandezza mentre la fai
+muovere. Quando ne riconosci uno, **📌** lo fissa nel cruscotto Live con nome,
+scala e unità di misura, sotto il sistema, una Smart Base o la sua macchina
+aria.
+
+I preset coprono sistema e zone, il blocco di ogni Smart Base, le stanze di
+ciascuna base e un intervallo oltre la parte documentata dove cercare i
+parametri delle VMC.
 
 ## AI per i PDF (opzionale)
 
@@ -154,7 +189,11 @@ locale**, in sola lettura.
   (contatore inverter vs contatore fiscale).
 - **AI non disponibile**: controlla `ai_provider` e `ai_api_key` nelle opzioni.
 - **Eurotherm "non raggiungibile"**: verifica IP e che la porta 502 sia
-  raggiungibile dalla rete di HA; se risponde ma i valori sono assurdi, controlla
-  unit id e tipo di registri (holding/input) in Setup.
-- **Eurotherm "nessuna zona trovata"**: la base/passo dei registri del tuo
-  impianto è diversa — impostala in **Mostra registri avanzati** e riprova.
+  raggiungibile dalla rete di HA; controlla anche l'unit id (1 di default, si
+  cambia dall'interfaccia del regolatore).
+- **Eurotherm: nessuna Smart Base rilevata**: "Rileva impianto" si basa sul
+  registro 59 e sulla mappa delle basi; se il regolatore le dichiara a zero,
+  usa **Esplora registri** partendo da 1140 per vedere cosa risponde.
+- **Una stanza non compare**: viene esclusa quando il sensore risulta
+  scollegato o il tipo di sensore non è valido — controlla la stanza nel
+  regolatore, poi rilancia "Rileva impianto".

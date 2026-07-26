@@ -166,23 +166,39 @@ estrae i dati di input.
 
 ## 8bis. Clima Eurotherm via Modbus TCP (v1.1)
 
-Il regolatore **Eurotherm Smart365 / SmartComfort365** non passa da HA: l'add-on
-lo interroga direttamente in **Modbus TCP** (client interno, FC3/FC4, sola
-lettura — nessuna scrittura di setpoint o modalità).
+Il regolatore **Eurotherm SmartComfort 365** non passa da HA: l'add-on lo
+interroga direttamente in **Modbus TCP** (client interno, FC3/FC4, sola lettura).
+Mappa dal documento ufficiale *Modbus interface for home automation*, rev. 05.
 
-Mappa di default (indirizzi di protocollo, base 0):
-- sistema: `58` temperatura esterna (×0,1 °C), `101` stagione (0 raffrescamento,
-  1 riscaldamento), `102` presenza (0 casa, 1 spento, 2 assente, 3 vacanza),
-  `103` boost aria;
-- zona N con `base = 1200 + (N−1)·400`: `base+5` temperatura (×0,1 °C),
-  `base+6` umidità (%), `base+8` setpoint (×0,1 °C), `base+9` modo.
+Un solo SmartControl365 risponde per tutto l'impianto; le parti si distinguono
+per indirizzo, non per IP o unit id:
 
-Base, passo, tipo di registri, IP/porta/unit id e intervallo di polling sono in
-`Config.eurotherm`, editabili dal Setup; **Cerca zone** sonda gli slot e propone
-quelli che rispondono con una temperatura plausibile. Le letture sono
-diagnostiche e **non entrano nel calcolo §4**: la chiave di ripartizione resta
-quella delle quote di calore Zenner. L'assegnazione zona → unità abitativa serve
-solo al raggruppamento nel cruscotto Live.
+- **sistema** 50–59: seriale, data/ora, temperatura esterna (58, ×0,1 °C, i
+  negativi come 65536 − valore), numero di zone (59);
+- **zona i** (sottosistema, max 8) a `100 + i·130`: stagione (0 freddo,
+  1 caldo), modo zona (casa/spento/assente/vacanza), boost rinnovo aria, numero
+  e bitmap delle Smart Base che la compongono;
+- **Smart Base b** (max 8) a `1140 + b·3260`: id base/zona, sensori collegati e
+  maschera errori, tipo base (con/senza miscelazione), setpoint e temperatura di
+  mandata;
+- **stanza r della base b** (8 per base) a `1140 + b·3260 + 60 + r·400`:
+  temperatura, umidità, punto di rugiada, obiettivo, modo, temperatura manuale,
+  più la maschera errori del sensore (condensa, umidità alta, batterie…).
+
+Impianto di casa: tre Smart Base — Genitori, Andrea piano 1, Andrea piano 2 — con
+una macchina aria ciascuna (Deuclima-VMC 500 V + 2× 500 S). `POST /discover`
+percorre la topologia dichiarata dal regolatore e propone basi e stanze presenti.
+
+**Le macchine aria non hanno registri nella rev. 05**: l'unico parametro aria
+esposto è il boost di rinnovo a livello di zona. Per questo esiste
+`POST /explore`, che spazza un intervallo di indirizzi (isolando per bisezione
+gli indirizzi che rispondono con eccezione Modbus) e mostra ogni registro
+leggibile; quelli riconosciuti si fissano nel Live (`config.custom`) con nome,
+scala e unità.
+
+Le letture sono diagnostiche e **non entrano nel calcolo §4**: la chiave di
+ripartizione resta quella delle quote di calore Zenner. L'assegnazione di base e
+stanza a un'unità abitativa serve solo al raggruppamento nel cruscotto Live.
 
 ## 9. Idee extra
 - Riepilogo stampabile/PDF per bolletta da condividere coi Genitori.

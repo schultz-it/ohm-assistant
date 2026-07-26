@@ -34,8 +34,9 @@ Clicca il badge, oppure manualmente:
   calcolo della ripartizione, allegato PDF, riepilogo stampabile.
 - **Storico**: totali per unità, grafico dello split per bolletta, €/kWh e
   **saldo cumulativo** con spunta "saldato".
-- **Live**: contabilizzatori Andrea/Genitori in tempo reale + fotovoltaico + le
-  zone del regolatore **Eurotherm** (Smart365) lette via Modbus TCP.
+- **Live**: contabilizzatori Andrea/Genitori in tempo reale + fotovoltaico + il
+  clima **Eurotherm SmartComfort 365** letto via Modbus TCP (Smart Base, stanze,
+  mandata, umidità e punto di rugiada), con esploratore dei registri.
 - **Setup**: mappa sensori editabile con verifica, nomi unità, canone RAI, AI.
 - **Bollette storiche**: import dei consumi dallo storico long-term di HA.
 

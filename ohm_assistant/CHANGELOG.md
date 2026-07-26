@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.2.0
+- **Mappa registri ufficiale** (SmartComfort 365, *Modbus interface for home
+  automation* rev. 05): l'integrazione non usa più indirizzi dedotti. Sistema
+  50–59, zona i a `100 + i·130`, Smart Base b a `1140 + b·3260`, stanza r a
+  `base + 60 + r·400`. Corretto l'indirizzamento oltre l'ottava stanza, che con
+  la mappa precedente sarebbe finito fuori bersaglio.
+- **Tre Smart Base con la loro unità aria**: Genitori (Deuclima-VMC 500 V),
+  Andrea piano 1 e piano 2 (500 S), precompilate. Il Live raggruppa per Smart
+  Base — mandata e setpoint di mandata, tipo di base, sensori collegati e in
+  errore, macchina aria — con le schede delle stanze sotto.
+- **Più parametri per stanza**: oltre a temperatura, umidità e obiettivo ora
+  ci sono **punto di rugiada**, modo esteso (automatico, manuale, manuale
+  temporaneo, party, early bird, buonanotte) e gli **allarmi del sensore**
+  (condensa, umidità alta con raffrescamento inibito, batterie da sostituire…).
+- **Rileva impianto** (`POST /api/eurotherm/discover`): il regolatore dichiara
+  la propria topologia (registro 59, bitmap delle basi per zona, id di base e
+  stanza) e l'add-on la percorre proponendo basi e stanze realmente presenti —
+  niente più tentativi alla cieca.
+- **Esplora registri** (`POST /api/eurotherm/explore`): spazza un intervallo di
+  indirizzi isolando per bisezione quelli che rispondono con eccezione Modbus,
+  annota i registri documentati, evidenzia quelli cambiati dall'ultima lettura
+  e permette di **fissarne uno nel Live** (📌) con nome, scala e unità. Serve
+  soprattutto per le **macchine aria**, che la rev. 05 non documenta: l'unico
+  parametro aria esposto è il boost di rinnovo di zona.
+- Temperature decodificate come da manuale (decimi di grado, negativi come
+  65536 − valore), quindi le esterne sotto zero si leggono correttamente.
+
 ## 1.1.0
 - **Clima Eurotherm nei dati live**: il regolatore Smart365 / SmartComfort365
   viene letto direttamente via **Modbus TCP** (sola lettura, nessuna scrittura di

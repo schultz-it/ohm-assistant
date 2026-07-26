@@ -32,7 +32,17 @@ MAX_REGISTERS = 125  # Modbus caps a single FC3/FC4 read at 125 registers.
 
 
 class ModbusError(Exception):
-    """Any protocol-, transport- or device-level failure while reading."""
+    """Any protocol-, transport- or device-level failure while reading.
+
+    `exception_code` is set only when the device answered with a proper Modbus
+    exception (typically "illegal data address" on an unused register). The
+    connection is still healthy in that case, so a scan can keep going — a
+    transport failure (code None) means the socket is gone.
+    """
+
+    def __init__(self, message: str, exception_code: int | None = None) -> None:
+        super().__init__(message)
+        self.exception_code = exception_code
 
 
 class ModbusTcpClient:
@@ -123,7 +133,8 @@ class ModbusTcpClient:
         if r_fc & 0x80:
             code = body[1] if len(body) > 1 else 0
             raise ModbusError(
-                f"eccezione Modbus {code}: {_EXCEPTIONS.get(code, 'sconosciuta')}")
+                f"eccezione Modbus {code}: {_EXCEPTIONS.get(code, 'sconosciuta')}",
+                exception_code=code)
         if r_fc != fc:
             raise ModbusError(f"function code inatteso: {r_fc}")
         byte_count = body[1]

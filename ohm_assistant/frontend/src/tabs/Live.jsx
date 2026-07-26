@@ -22,7 +22,124 @@ const UNIT_COLOR = {
 };
 const SEASON_ICON = { riscaldamento: "🔥", raffrescamento: "❄️" };
 
-// Eurotherm Smart365: zone climatiche lette via Modbus TCP dal regolatore.
+// Valore di un registro fissato dall'utente nel Setup.
+const Pinned = ({ items }) =>
+  !items || items.length === 0 ? null : (
+    <div class="mt-2 space-y-1">
+      {items.map((c) => (
+        <div class="flex justify-between" key={c.address}>
+          <span class={lbl}>📌 {c.name}</span>
+          <span class="text-sm tabular-nums">
+            {!c.available ? "—"
+              : c.text != null ? c.text
+              : `${(+c.value).toLocaleString("it-IT", { maximumFractionDigits: 2 })} ${c.unit}`}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+function Room({ room, names }) {
+  const r = room.readings;
+  const errors = r.errors.raw ? r.errors.text : null;
+  return (
+    <div class={card}>
+      <div class="flex items-baseline justify-between gap-1">
+        <div class="font-medium truncate text-sm">{room.name}</div>
+        {room.unit && (
+          <div class={"text-[10px] shrink-0 " + (UNIT_COLOR[room.unit] || "")}>
+            {room.unit === "comune" ? "comune" : names[room.unit] || room.unit}
+          </div>
+        )}
+      </div>
+      <div class="text-2xl font-semibold tabular-nums mt-1">
+        {r.temperature.available
+          ? r.temperature.value.toLocaleString("it-IT", { minimumFractionDigits: 1 })
+          : "—"}
+        <span class="text-sm text-gray-500"> °C</span>
+      </div>
+      <div class="mt-1 space-y-1">
+        <div class="flex justify-between">
+          <span class={lbl}>🎯 Obiettivo</span>
+          <span class="text-sm tabular-nums">{fmt(r.target)}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class={lbl}>💧 Umidità</span>
+          <span class="text-sm tabular-nums">{fmt(r.humidity)}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class={lbl}>🫧 Rugiada</span>
+          <span class="text-sm tabular-nums">{fmt(r.dewpoint)}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class={lbl}>⚙️ Modo</span>
+          <span class="text-sm">{r.mode.text}</span>
+        </div>
+      </div>
+      {errors && <div class="text-[11px] text-red-600 mt-1">⚠ {errors}</div>}
+    </div>
+  );
+}
+
+function Base({ base, names }) {
+  const m = base.readings;
+  const sensorIssue = base.available && m.sensor_errors.raw ? m.sensor_errors.text : null;
+  return (
+    <div class="space-y-3">
+      <div class={card}>
+        <div class="flex items-baseline justify-between gap-2">
+          <div class="font-semibold truncate">
+            {base.name}
+            {base.unit && (
+              <span class={"ml-2 text-[11px] font-normal " + (UNIT_COLOR[base.unit] || "")}>
+                {base.unit === "comune" ? "comune" : names[base.unit] || base.unit}
+              </span>
+            )}
+          </div>
+          {base.available && (
+            <div class="text-sm tabular-nums shrink-0">
+              {fmt(m.flow_temp)}
+              <span class={lbl}> / {fmt(m.flow_setpoint)}</span>
+            </div>
+          )}
+        </div>
+        {!base.available ? (
+          <div class="text-xs text-red-600 mt-1">
+            la Smart Base non risponde all'indirizzo {base.address}
+          </div>
+        ) : (
+          <>
+            <div class="flex justify-between mt-1">
+              <span class={lbl}>🔧 {m.base_type.text}</span>
+              <span class={lbl}>{m.sensor_count.value} sensori</span>
+            </div>
+            {sensorIssue && <div class="text-[11px] text-red-600 mt-1">⚠ {sensorIssue}</div>}
+            {base.air_model && (
+              <div class="flex justify-between mt-1">
+                <span class={lbl}>🌬️ {base.air_model}</span>
+                {base.air.custom.length === 0 && (
+                  <span class="text-[11px] text-gray-400">nessun parametro fissato</span>
+                )}
+              </div>
+            )}
+            <Pinned items={base.air?.custom} />
+            <Pinned items={base.custom} />
+          </>
+        )}
+      </div>
+
+      {base.rooms.length > 0 && (
+        <div class="grid grid-cols-2 gap-3">
+          {base.rooms.map((r) => (
+            <Room room={r} names={names} key={`${r.base}.${r.room}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Eurotherm SmartComfort 365: sistema, zone, Smart Base e stanze via Modbus TCP.
 function Eurotherm({ eu, names }) {
   if (!eu || !eu.enabled) return null;
   if (eu.error)
@@ -34,71 +151,35 @@ function Eurotherm({ eu, names }) {
     );
 
   const sys = eu.system || {};
-  const season = sys.season?.text;
+  const zone = eu.subsystems?.[0]?.readings;
+  const season = zone?.operative_mode?.text;
 
   return (
-    <div class="space-y-3">
+    <div class="space-y-4">
       <div class={card + " space-y-2"}>
         <div class="flex items-center justify-between">
           <div class="font-semibold">🏠 Clima Eurotherm</div>
           <div class="text-sm">
             {season && <span class="mr-2">{SEASON_ICON[season] || "🌡️"} {season}</span>}
-            {sys.presence?.available && (
-              <span class="text-xs text-gray-500">· {sys.presence.text}</span>
-            )}
+            {zone?.zone_mode && <span class="text-xs text-gray-500">· {zone.zone_mode.text}</span>}
           </div>
         </div>
         <div class="flex justify-between text-sm">
           <span class={lbl}>🌤️ Temperatura esterna</span>
           <span class="font-medium tabular-nums">{fmt(sys.external_temp)}</span>
         </div>
-        {sys.air_boost?.value ? (
-          <div class="text-xs text-emerald-600">💨 boost aria attivo</div>
+        {zone?.air_boost?.value ? (
+          <div class="text-xs text-emerald-600">💨 boost rinnovo aria attivo</div>
         ) : null}
+        <Pinned items={eu.custom} />
       </div>
 
-      {eu.zones.length === 0 ? (
+      {eu.bases.length === 0 ? (
         <div class={card + " text-xs text-gray-500"}>
-          Nessuna zona configurata — usa “Cerca zone” nel tab Setup.
+          Nessuna Smart Base attiva — usa “Rileva impianto” nel tab Setup.
         </div>
       ) : (
-        <div class="grid grid-cols-2 gap-3">
-          {eu.zones.map((z) => {
-            const r = z.readings;
-            return (
-              <div class={card} key={z.index}>
-                <div class="flex items-baseline justify-between gap-1">
-                  <div class="font-medium truncate text-sm">{z.name}</div>
-                  {z.unit && (
-                    <div class={"text-[10px] shrink-0 " + (UNIT_COLOR[z.unit] || "")}>
-                      {z.unit === "comune" ? "comune" : names[z.unit] || z.unit}
-                    </div>
-                  )}
-                </div>
-                <div class="text-2xl font-semibold tabular-nums mt-1">
-                  {r.temperature.available
-                    ? r.temperature.value.toLocaleString("it-IT", { minimumFractionDigits: 1 })
-                    : "—"}
-                  <span class="text-sm text-gray-500"> °C</span>
-                </div>
-                <div class="mt-1 space-y-1">
-                  <div class="flex justify-between">
-                    <span class={lbl}>🎯 Setpoint</span>
-                    <span class="text-sm tabular-nums">{fmt(r.setpoint)}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class={lbl}>💧 Umidità</span>
-                    <span class="text-sm tabular-nums">{fmt(r.humidity)}</span>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class={lbl}>⚙️ Modo</span>
-                    <span class="text-sm">{r.mode.available ? r.mode.text : "—"}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        eu.bases.map((b) => <Base base={b} names={names} key={b.id} />)
       )}
     </div>
   );
