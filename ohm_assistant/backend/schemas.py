@@ -15,6 +15,53 @@ class ConfigOut(BaseModel):
     entity_map: dict  # effective map (defaults + overrides), key -> entity_id
 
 
+class EurothermRoom(BaseModel):
+    """Name/unit for a room, addressed as the protocol does: base + room id."""
+    base: int = Field(ge=0, le=7)
+    room: int = Field(ge=0, le=7)
+    name: str = ""
+    enabled: bool = True
+    unit: str | None = Field(default=None, pattern="^(andrea|genitori|comune)$")
+
+
+class EurothermBase(BaseModel):
+    """A Smart Base module and the air machine wired to it."""
+    id: int = Field(ge=0, le=7)
+    name: str = ""
+    unit: str | None = Field(default=None, pattern="^(andrea|genitori|comune)$")
+    enabled: bool = True
+    air_model: str = ""
+
+
+class EurothermCustom(BaseModel):
+    """A register identified with the explorer and pinned to the Live tab."""
+    address: int = Field(ge=0, le=65535)
+    name: str = ""
+    group: str = "sistema"          # sistema | base:<n> | air:<n>
+    scale: float = 1.0
+    unit: str = ""
+    kind: str = Field(default="number", pattern="^(number|bool|temp)$")
+
+
+class EurothermExplore(BaseModel):
+    start: int = Field(ge=0, le=65535)
+    count: int = Field(default=256, ge=1, le=2048)
+
+
+class EurothermConfig(BaseModel):
+    """Modbus TCP settings for the Eurotherm Smart365 regulator."""
+    enabled: bool | None = None
+    host: str | None = None
+    port: int | None = Field(default=None, ge=1, le=65535)
+    unit_id: int | None = Field(default=None, ge=0, le=247)
+    input_type: str | None = Field(default=None, pattern="^(holding|input)$")
+    timeout: float | None = Field(default=None, gt=0, le=60)
+    poll_interval: int | None = Field(default=None, ge=5, le=3600)
+    bases: list[EurothermBase] | None = None
+    rooms: list[EurothermRoom] | None = None
+    custom: list[EurothermCustom] | None = None
+
+
 class ConfigUpdate(BaseModel):
     andrea_name: str | None = None
     genitori_name: str | None = None

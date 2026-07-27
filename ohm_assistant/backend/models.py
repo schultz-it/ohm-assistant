@@ -19,6 +19,8 @@ class Config(Base):
     canone_rai_default: Mapped[float] = mapped_column(default=0.0)
     # Overrides to DEFAULT_MAP: {key: entity_id}. Empty = all defaults.
     entity_map: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Eurotherm Smart365 Modbus TCP settings (see core.eurotherm.DEFAULT_CONFIG).
+    eurotherm: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 class Bill(Base):

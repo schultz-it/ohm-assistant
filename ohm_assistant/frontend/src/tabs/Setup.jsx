@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { get, post, put } from "../api.js";
+import { get, put } from "../api.js";
+import { EurothermSetup } from "./EurothermSetup.jsx";
 
 const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4";
 const btnP = "px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-medium disabled:opacity-50";
@@ -87,6 +88,8 @@ export function Setup() {
           </div>
         ))}
       </div>
+
+      <EurothermSetup />
 
       <div class="flex items-center gap-3">
         <button class={btnP} onClick={save}>Salva impostazioni</button>

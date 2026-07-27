@@ -39,6 +39,7 @@ def get_db():
 # applied manually at startup (idempotent).
 _MIGRATIONS: list[tuple[str, str, str]] = [
     ("bills", "settled", "BOOLEAN DEFAULT 0"),
+    ("config", "eurotherm", "JSON DEFAULT '{}'"),
 ]
 
 

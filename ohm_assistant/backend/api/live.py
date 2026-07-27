@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from ..core import eurotherm as et
 from ..core import ha
 from ..db import get_db
 from ..entities import merged_map
@@ -39,6 +40,15 @@ async def live(db: Session = Depends(get_db)):
 
     pv = {"load_power": _reading(by_id, emap["pv_load_power"])}
 
+    # Eurotherm climate zones (Modbus TCP, optional). Behind a TTL cache and
+    # never fatal: a regulator hiccup must not blank the rest of the dashboard.
+    eu_cfg = et.merged_config(cfg.eurotherm)
+    try:
+        eurotherm = await et.read_live_cached(eu_cfg)
+    except Exception as exc:  # noqa: BLE001 — surface it, don't 500 the tab
+        eurotherm = {"enabled": eu_cfg["enabled"], "system": {}, "zones": [],
+                     "error": str(exc)}
+
     # Derived: instantaneous heat split by thermal power.
     pa = units["andrea"]["power"]["value"]
     pg = units["genitori"]["power"]["value"]
@@ -50,6 +60,7 @@ async def live(db: Session = Depends(get_db)):
         "names": {"andrea": cfg.andrea_name, "genitori": cfg.genitori_name},
         "units": units,
         "pv": pv,
+        "eurotherm": eurotherm,
         "derived": {
             "total_power": round(total_power, 3) if (pa is not None or pg is not None) else None,
             "heat_split_andrea": round(heat_split_andrea, 3) if heat_split_andrea is not None else None,

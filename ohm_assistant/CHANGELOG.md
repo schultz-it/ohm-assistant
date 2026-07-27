@@ -1,5 +1,52 @@
 # Changelog
 
+## 1.2.0
+- **Mappa registri ufficiale** (SmartComfort 365, *Modbus interface for home
+  automation* rev. 05): l'integrazione non usa più indirizzi dedotti. Sistema
+  50–59, zona i a `100 + i·130`, Smart Base b a `1140 + b·3260`, stanza r a
+  `base + 60 + r·400`. Corretto l'indirizzamento oltre l'ottava stanza, che con
+  la mappa precedente sarebbe finito fuori bersaglio.
+- **Tre Smart Base con la loro unità aria**: Genitori (Deuclima-VMC 500 V),
+  Andrea piano 1 e piano 2 (500 S), precompilate. Il Live raggruppa per Smart
+  Base — mandata e setpoint di mandata, tipo di base, sensori collegati e in
+  errore, macchina aria — con le schede delle stanze sotto.
+- **Più parametri per stanza**: oltre a temperatura, umidità e obiettivo ora
+  ci sono **punto di rugiada**, modo esteso (automatico, manuale, manuale
+  temporaneo, party, early bird, buonanotte) e gli **allarmi del sensore**
+  (condensa, umidità alta con raffrescamento inibito, batterie da sostituire…).
+- **Rileva impianto** (`POST /api/eurotherm/discover`): il regolatore dichiara
+  la propria topologia (registro 59, bitmap delle basi per zona, id di base e
+  stanza) e l'add-on la percorre proponendo basi e stanze realmente presenti —
+  niente più tentativi alla cieca.
+- **Esplora registri** (`POST /api/eurotherm/explore`): spazza un intervallo di
+  indirizzi isolando per bisezione quelli che rispondono con eccezione Modbus,
+  annota i registri documentati, evidenzia quelli cambiati dall'ultima lettura
+  e permette di **fissarne uno nel Live** (📌) con nome, scala e unità. Serve
+  soprattutto per le **macchine aria**, che la rev. 05 non documenta: l'unico
+  parametro aria esposto è il boost di rinnovo di zona.
+- Temperature decodificate come da manuale (decimi di grado, negativi come
+  65536 − valore), quindi le esterne sotto zero si leggono correttamente.
+
+## 1.1.0
+- **Clima Eurotherm nei dati live**: il regolatore Smart365 / SmartComfort365
+  viene letto direttamente via **Modbus TCP** (sola lettura, nessuna scrittura di
+  setpoint o modalità) e le sue zone compaiono nella tab **Live** insieme a
+  stagione, presenza e temperatura esterna.
+- Setup: pannello *Clima Eurotherm* con IP/porta/unit id, intervallo di
+  aggiornamento, **Prova connessione**, **Cerca zone** (sonda gli slot e propone
+  quelle che rispondono), nome per zona e assegnazione opzionale a un'unità
+  abitativa. Mappa dei registri (base 1200, passo 400, +5/+6/+8/+9 e i registri
+  di sistema 58/101/102/103) modificabile per impianti cablati diversamente.
+- Client Modbus TCP interno (FC3/FC4, nessuna dipendenza aggiuntiva), letture in
+  blocchi contigui e cache TTL pari all'intervallo configurato: la tab Live si
+  aggiorna ogni 5 s senza sovraccaricare il bus. Regolatore irraggiungibile o
+  disabilitato non compromette mai il resto del cruscotto.
+- API: `GET/PUT /api/eurotherm/config`, `GET /api/eurotherm/live`,
+  `POST /api/eurotherm/test`, `POST /api/eurotherm/scan`,
+  `GET /api/eurotherm/registers`; blocco `eurotherm` aggiunto a `GET /api/live`.
+- Le letture Eurotherm sono diagnostiche: la ripartizione delle bollette resta
+  basata sulle quote di calore Zenner.
+
 ## 1.0.0 🎉
 - Prima release stabile.
 - Riepilogo bolletta stampabile/condivisibile: `GET /api/bills/{id}/report`
