@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+- Setup Eurotherm: le tendine di assegnazione mostrano i **nomi delle unità
+  abitative** scelti in "Unità e canone" invece dei generici "Unità 1/2", come
+  già fa il resto dell'app.
+
 ## 1.3.0
 - **Mappa dispositivo** (`POST /api/eurotherm/map`): sonda lo spazio indirizzi
   del regolatore ed elenca le zone di registri realmente esposte, distinguendo

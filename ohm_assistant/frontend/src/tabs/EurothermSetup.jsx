@@ -8,10 +8,11 @@ const inp = "w-full px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gr
 const inpAuto = inp.replace("w-full ", "");
 const lbl = "text-xs text-gray-500 dark:text-gray-400";
 
-const UNITS = [
+// Le due unità abitative, etichettate coi nomi scelti in Setup.
+const unitOptions = (names) => [
   { v: "", label: "—" },
-  { v: "andrea", label: "Unità 1" },
-  { v: "genitori", label: "Unità 2" },
+  { v: "andrea", label: names.andrea || "Unità 1" },
+  { v: "genitori", label: names.genitori || "Unità 2" },
   { v: "comune", label: "Comune" },
 ];
 const SCALES = [
@@ -37,7 +38,7 @@ function groupOptions(bases) {
  * dell'impianto (zone → Smart Base → stanze), esploratore dei registri e
  * parametri fissati nel cruscotto Live.
  */
-export function EurothermSetup() {
+export function EurothermSetup({ names = {} }) {
   const [eu, setEu] = useState(null);
   const [meta, setMeta] = useState(null);
   const [adv, setAdv] = useState(false);
@@ -189,6 +190,7 @@ export function EurothermSetup() {
     save(true, { custom: eu.custom.filter((_, j) => j !== i) });
 
   const groups = groupOptions(eu.bases);
+  const units = unitOptions(names);
   const visible = (rows?.registers || []).filter(
     (r) => (!onlyChanged || r.changed) && (!hideZeros || r.raw !== 0));
 
@@ -247,7 +249,7 @@ export function EurothermSetup() {
                 onInput={(e) => setBase(i, { name: e.target.value })} />
               <select class={inpAuto + " w-24 shrink-0"} value={b.unit || ""}
                 onInput={(e) => setBase(i, { unit: e.target.value })}>
-                {UNITS.map((u) => <option value={u.v} key={u.v}>{u.label}</option>)}
+                {units.map((u) => <option value={u.v} key={u.v}>{u.label}</option>)}
               </select>
             </div>
             <div class="flex items-center gap-2 pl-9">
@@ -283,7 +285,7 @@ export function EurothermSetup() {
                   onInput={(e) => setRoom(i, { name: e.target.value })} />
                 <select class={inpAuto + " w-24 shrink-0"} value={r.unit || ""}
                   onInput={(e) => setRoom(i, { unit: e.target.value })}>
-                  {UNITS.map((u) => <option value={u.v} key={u.v}>{u.label}</option>)}
+                  {units.map((u) => <option value={u.v} key={u.v}>{u.label}</option>)}
                 </select>
               </div>
             ))}

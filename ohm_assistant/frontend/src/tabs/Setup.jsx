@@ -89,7 +89,7 @@ export function Setup() {
         ))}
       </div>
 
-      <EurothermSetup />
+      <EurothermSetup names={{ andrea: cfg.andrea_name, genitori: cfg.genitori_name }} />
 
       <div class="flex items-center gap-3">
         <button class={btnP} onClick={save}>Salva impostazioni</button>
