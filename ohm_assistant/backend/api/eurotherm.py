@@ -66,6 +66,19 @@ async def explore(req: schemas.EurothermExplore,
     return await et.explore(config_for(db), req.start, req.count)
 
 
+@router.post("/map")
+async def map_device(req: schemas.EurothermMap,
+                     db: Session = Depends(get_db)) -> dict:
+    """Find every populated region of the address space.
+
+    The manual stops at the room blocks, so this is how you establish whether
+    the controller exposes anything else at all — the air machines included.
+    Returns `next_start` when the read budget runs out, so the caller resumes.
+    """
+    return await et.map_device(config_for(db), req.start, req.end, req.stride,
+                               req.max_probes)
+
+
 def _specs(specs: list[dict]) -> list[dict]:
     """Register specs without the raw enum dicts, values spelled out instead."""
     return [{k: v for k, v in s.items() if k != "enum"}
@@ -78,6 +91,7 @@ def registers(db: Session = Depends(get_db)) -> dict:
     cfg = config_for(db)
     return {
         "presets": et.explore_presets(cfg),
+        "map_presets": et.map_presets(),
         "air_models": et.AIR_MODELS,
         "explore_max": et.EXPLORE_MAX,
         "layout": {

@@ -53,6 +53,10 @@ export function EurothermSetup() {
   const [pin, setPin] = useState(null);
   const prev = useRef(new Map());
 
+  // Mappa del dispositivo
+  const [mapRes, setMapRes] = useState(null);
+  const [mapProgress, setMapProgress] = useState("");
+
   const reload = () => Promise.all([
     get("api/eurotherm/config").then(setEu),
     get("api/eurotherm/registers").then(setMeta),
@@ -146,6 +150,29 @@ export function EurothermSetup() {
       setRows({ ...r, registers: next });
     } catch (e) { setRows({ ok: false, error: e.message, registers: [] }); }
     setBusy("");
+  }
+
+  // Sonda l'intervallo a più riprese finché il backend non ha finito.
+  async function runMap(preset) {
+    setBusy("map"); setMapRes(null); setMapProgress("…");
+    const islands = [];
+    let start = preset.start;
+    try {
+      await save(true);
+      for (let pass = 0; pass < 40; pass++) {
+        const r = await post("api/eurotherm/map", {
+          start, end: preset.end, stride: 8, max_probes: 2000,
+        });
+        if (!r.ok) { setMapRes({ ok: false, error: r.error, islands }); break; }
+        islands.push(...r.islands);
+        setMapProgress(`letto fino a ${r.next_start ?? preset.end} · `
+          + `${islands.length} zone trovate`);
+        if (r.next_start == null) { setMapRes({ ok: true, islands }); break; }
+        start = r.next_start;
+        if (pass === 39) setMapRes({ ok: true, islands, partial: true });
+      }
+    } catch (e) { setMapRes({ ok: false, error: e.message, islands }); }
+    setMapProgress(""); setBusy("");
   }
 
   async function addPin() {
@@ -298,6 +325,50 @@ export function EurothermSetup() {
             </button>
           ))}
         </div>
+        <div class="space-y-1.5 border-l-2 border-gray-200 dark:border-gray-800 pl-2">
+          <div class="text-xs text-gray-500">
+            Non sai dove guardare? La <b>mappa</b> sonda lo spazio indirizzi e
+            elenca le zone di registri che il regolatore espone davvero: quello
+            che compare fuori dai blocchi documentati è un candidato per le
+            macchine aria.
+          </div>
+          <div class="flex gap-1.5 flex-wrap">
+            {(meta?.map_presets || []).map((p) => (
+              <button class={btn} key={p.key} disabled={busy}
+                title={p.hint} onClick={() => runMap(p)}>
+                🗺️ {p.label}
+              </button>
+            ))}
+          </div>
+          {mapProgress && <div class="text-xs text-gray-500">{mapProgress}</div>}
+          {mapRes && !mapRes.ok && (
+            <div class="text-xs text-red-600">{mapRes.error}</div>
+          )}
+          {mapRes && (
+            mapRes.islands.length === 0 ? (
+              <div class="text-xs text-gray-500">
+                nessun registro in questo intervallo
+              </div>
+            ) : (
+              <div class="space-y-0.5">
+                {mapRes.islands.map((z) => (
+                  <button key={z.start}
+                    class={"flex justify-between w-full text-xs px-1 py-0.5 rounded "
+                      + (z.documented ? "text-gray-500"
+                                      : "text-emerald-700 dark:text-emerald-400 font-medium")}
+                    onClick={() => explore(z.start, Math.min(z.count, 2048))}>
+                    <span class="font-mono">{z.start}–{z.end}</span>
+                    <span class="truncate ml-2">
+                      {z.known || (z.documented ? "" : "non documentato")}
+                      <span class="text-gray-400"> · {z.count} reg.</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
         <div class="flex items-end gap-2">
           <div><div class={lbl}>Da</div>
             <input class={inpAuto + " w-24"} type="number" value={range.start}

@@ -48,6 +48,14 @@ class EurothermExplore(BaseModel):
     count: int = Field(default=256, ge=1, le=2048)
 
 
+class EurothermMap(BaseModel):
+    """A slice of the address space to probe for populated regions."""
+    start: int = Field(default=0, ge=0, le=65535)
+    end: int = Field(default=65535, ge=0, le=65535)
+    stride: int = Field(default=8, ge=1, le=256)
+    max_probes: int = Field(default=2000, ge=100, le=20000)
+
+
 class EurothermConfig(BaseModel):
     """Modbus TCP settings for the Eurotherm Smart365 regulator."""
     enabled: bool | None = None

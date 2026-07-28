@@ -653,3 +653,131 @@ async def explore(cfg: dict, start: int, count: int) -> dict:
                 "registers": _explored(cfg, words), "unreadable": unreadable}
     return {"ok": True, "error": None, "start": start, "count": count,
             "registers": _explored(cfg, words), "unreadable": unreadable}
+
+
+# ---------------------------------------------------------------------------
+# Device map
+#
+# The manual documents system, zone, Smart Base and room blocks and stops
+# there — the Deuclima-VMC / SmartAir parameters visible on the panel's
+# advanced menu are not in it. They may still be somewhere in the address
+# space, so this maps the device empirically: probe one register every
+# `stride` addresses, then grow each hit outwards until the controller refuses,
+# which yields the *islands* of populated registers. Anything the map finds
+# outside the documented blocks is a candidate worth watching in the explorer.
+# ---------------------------------------------------------------------------
+
+MAP_STRIDE = 8              # islands shorter than this can be missed
+MAP_MAX_PROBES = 2000       # per call; the caller resumes from `next_start`
+MAP_MAX_ADDRESS = 0xFFFF
+_ISLAND_STEPS = (64, 16, 4, 1)   # forward growth, coarse to fine
+
+
+class _BudgetExhausted(Exception):
+    """Raised when a mapping call has used up its read budget."""
+
+
+class _Budget:
+    """Counts Modbus reads so one call can't run forever."""
+
+    def __init__(self, limit: int) -> None:
+        self.left = limit
+
+    def spend(self) -> None:
+        self.left -= 1
+        if self.left < 0:
+            raise _BudgetExhausted
+
+
+async def _readable(client: ModbusTcpClient, cfg: dict, start: int,
+                    count: int, budget: _Budget) -> bool:
+    """True when the device answers this read; False when it refuses it."""
+    budget.spend()                            # exhausted → caller resumes later
+    try:
+        await client.read(start, count, cfg["input_type"])
+    except ModbusError as exc:
+        if exc.exception_code is None:
+            raise
+        return False
+    return True
+
+
+async def _island(client: ModbusTcpClient, cfg: dict, hit: int,
+                  stride: int, budget: _Budget) -> tuple[int, int]:
+    """Bounds of the populated run containing `hit`, as (start, end_exclusive)."""
+    lo = hit
+    while lo > 0 and hit - lo < stride:
+        if not await _readable(client, cfg, lo - 1, 1, budget):
+            break
+        lo -= 1
+    hi = hit + 1
+    while hi <= MAP_MAX_ADDRESS:
+        for step in _ISLAND_STEPS:
+            if hi + step - 1 > MAP_MAX_ADDRESS:
+                continue
+            if await _readable(client, cfg, hi, step, budget):
+                hi += step
+                break
+        else:
+            break
+    return lo, hi
+
+
+async def map_device(cfg: dict, start: int = 0, end: int = MAP_MAX_ADDRESS,
+                     stride: int = MAP_STRIDE,
+                     max_probes: int = MAP_MAX_PROBES) -> dict:
+    """Find every populated region between `start` and `end`.
+
+    Returns the islands found plus `next_start` when the read budget ran out,
+    so the caller can continue where this left off.
+    """
+    if not cfg["host"]:
+        return {"ok": False, "error": "indirizzo del regolatore non configurato",
+                "islands": [], "next_start": None}
+    start = max(0, int(start))
+    end = min(MAP_MAX_ADDRESS, int(end))
+    stride = max(1, int(stride))
+    budget = _Budget(max_probes)
+    islands: list[dict] = []
+    next_start: int | None = None
+    addr = start
+    try:
+        async with ModbusTcpClient(cfg["host"], cfg["port"], cfg["unit_id"],
+                                   cfg["timeout"]) as client:
+            while addr <= end:
+                try:
+                    hit = await _readable(client, cfg, addr, 1, budget)
+                    if not hit:
+                        addr += stride
+                        continue
+                    lo, hi = await _island(client, cfg, addr, stride, budget)
+                except _BudgetExhausted:
+                    next_start = addr
+                    break
+                islands.append({"start": lo, "end": hi - 1, "count": hi - lo,
+                                "known": describe_address(cfg, lo),
+                                "documented": describe_address(cfg, lo) is not None})
+                addr = hi + (stride - (hi - start) % stride) % stride
+    except ModbusError as exc:
+        return {"ok": False, "error": str(exc), "islands": islands,
+                "next_start": None}
+    return {"ok": True, "error": None, "islands": islands,
+            "scanned_to": min(addr, end), "next_start": next_start,
+            "stride": stride}
+
+
+def map_presets() -> list[dict]:
+    """Where it makes sense to look for what the manual doesn't document."""
+    last_documented = room_addr(MAX_MODULES - 1, ROOMS_PER_MODULE - 1) \
+        + _block_len(ROOM_REGISTERS)
+    return [
+        {"key": "before", "label": "Prima delle Smart Base (0–1139)",
+         "start": 0, "end": MODULE_BASE - 1,
+         "hint": "sistema, zone e ciò che sta nei buchi"},
+        {"key": "after", "label": f"Dopo i blocchi documentati ({last_documented}+)",
+         "start": last_documented, "end": MAP_MAX_ADDRESS,
+         "hint": "qui finirebbero eventuali blocchi delle macchine aria"},
+        {"key": "all", "label": "Tutto lo spazio (0–65535)",
+         "start": 0, "end": MAP_MAX_ADDRESS,
+         "hint": "scansione completa, procede a più riprese"},
+    ]

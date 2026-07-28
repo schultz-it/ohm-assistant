@@ -189,6 +189,11 @@ Impianto di casa: tre Smart Base — Genitori, Andrea piano 1, Andrea piano 2 �
 una macchina aria ciascuna (Deuclima-VMC 500 V + 2× 500 S). `POST /discover`
 percorre la topologia dichiarata dal regolatore e propone basi e stanze presenti.
 
+`POST /map` sonda lo spazio indirizzi (un campione ogni 8, poi allarga ogni
+riscontro fino al rifiuto) ed elenca le zone di registri esposte, marcando
+quelle fuori dai blocchi documentati: è il modo per stabilire empiricamente se
+esista altro oltre il manuale.
+
 **Le macchine aria non hanno registri nella rev. 05**: l'unico parametro aria
 esposto è il boost di rinnovo a livello di zona. Per questo esiste
 `POST /explore`, che spazza un intervallo di indirizzi (isolando per bisezione
