@@ -140,17 +140,34 @@ l'unico parametro dell'aria che espone è il **boost di rinnovo** a livello di
 zona (registro 103 + offset). Il modello della macchina associata a ogni base è
 quindi solo un'etichetta.
 
-Per andare oltre c'è **🔎 Esplora registri**: legge un intervallo di indirizzi,
-mostra ogni registro che risponde (valore, ×0,1, indirizzo, e l'etichetta se il
-manuale lo documenta) ed evidenzia quelli **cambiati** dall'ultima lettura — il
-modo pratico per capire quale registro segue una grandezza mentre la fai
-muovere. Quando ne riconosci uno, **📌** lo fissa nel cruscotto Live con nome,
-scala e unità di misura, sotto il sistema, una Smart Base o la sua macchina
-aria.
+Questo però dice solo cosa è *documentato*. I valori che vedi nel menu avanzato
+del pannello il regolatore li ha in memoria — li legge dalle macchine sul bus
+interno — quindi restano due possibilità: che siano esposti anche sul Modbus
+esterno a indirizzi non documentati, oppure che vivano solo dentro
+l'interfaccia del pannello. Per stabilirlo ci sono due strumenti.
 
-I preset coprono sistema e zone, il blocco di ogni Smart Base, le stanze di
-ciascuna base e un intervallo oltre la parte documentata dove cercare i
-parametri delle VMC.
+**🗺️ Mappa dispositivo.** Sonda lo spazio indirizzi ed elenca le **zone di
+registri che il regolatore espone davvero**, marcando in verde quelle fuori dai
+blocchi documentati — le candidate per le macchine aria. Tre intervalli pronti:
+prima delle Smart Base (0–1139), dopo i blocchi documentati, e tutto lo spazio
+0–65535. Le scansioni lunghe procedono a più riprese, con avanzamento a video.
+Un clic su una zona la apre nell'esploratore. Nota: campiona un indirizzo ogni
+8, quindi blocchi più corti di 8 registri possono sfuggirle.
+
+**🔎 Esplora registri.** Legge un intervallo e mostra ogni registro che
+risponde (valore, ×0,1, e l'etichetta se il manuale lo documenta) evidenziando
+quelli **cambiati** dall'ultima lettura. È il modo pratico per identificarli:
+cambia una cosa sul pannello — velocità di ventilazione, boost, un setpoint —
+poi premi **Rileggi** con **solo cambiati** spuntato, e resta ciò che si è
+mosso. Quando riconosci un registro, **📌** lo fissa nel cruscotto Live con
+nome, scala e unità di misura, sotto il sistema, una Smart Base o la sua
+macchina aria.
+
+Se la mappa non trova nulla fuori dai blocchi documentati, allora quei valori
+sul Modbus TCP non ci sono, e le strade restano due: leggere le Deuclima
+**direttamente** sul loro bus RS-485 con un gateway Modbus, oppure chiedere a
+Eurotherm una revisione più recente del documento di protocollo (questa è la
+rev. 05 del 2022).
 
 ## AI per i PDF (opzionale)
 

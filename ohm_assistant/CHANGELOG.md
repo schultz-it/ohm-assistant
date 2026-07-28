@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0
+- **Mappa dispositivo** (`POST /api/eurotherm/map`): sonda lo spazio indirizzi
+  del regolatore ed elenca le zone di registri realmente esposte, distinguendo
+  quelle documentate dal manuale da quelle che non lo sono. Serve a stabilire
+  con i fatti se i parametri delle **Deuclima-VMC** — quelli visibili nel menu
+  avanzato del pannello — siano raggiungibili via Modbus o vivano solo
+  nell'interfaccia del pannello.
+- Campiona un indirizzo ogni 8 e poi allarga ogni riscontro fino al rifiuto del
+  dispositivo, così una scansione completa di 65536 indirizzi resta praticabile;
+  le scansioni lunghe procedono a più riprese (`next_start`) con avanzamento
+  mostrato nel Setup. Un clic su una zona trovata la apre nell'esploratore.
+- Setup: intervalli pronti per prima delle Smart Base, dopo i blocchi
+  documentati e tutto lo spazio indirizzi; le zone non documentate sono
+  evidenziate.
+
 ## 1.2.0
 - **Mappa registri ufficiale** (SmartComfort 365, *Modbus interface for home
   automation* rev. 05): l'integrazione non usa più indirizzi dedotti. Sistema
