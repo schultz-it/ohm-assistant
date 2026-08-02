@@ -1,8 +1,8 @@
 # Changelog
 
 ## 1.4.0
-- **Registro spese condivise** (nuova tab **Spese**, SPEC 12): spese di casa in
-  stile Splitwise fra le due unità — descrizione, importo, data, chi ha pagato e
+- **Registro spese condivise** (nuova tab **Spese**, SPEC 12): spese di casa
+  divise fra le due unità — descrizione, importo, data, chi ha pagato e
   divisione **a metà / per percentuali / per cifre**, con anteprima delle quote.
   La **categoria è proposta automaticamente** dalla descrizione con un match su
   parole chiave, in locale: niente AI, niente rete, nessun costo.

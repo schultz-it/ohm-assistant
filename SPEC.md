@@ -232,7 +232,7 @@ stanza a un'unità abitativa serve solo al raggruppamento nel cruscotto Live.
 
 
 ## 12. Registro spese condivise (v1.4)
-Modulo tipo Splitwise per le spese di casa che **non** sono bollette luce/gas (idraulico,
+Modulo per dividere le spese di casa che **non** sono bollette luce/gas (idraulico,
 TARI, giardiniere, condominio…), sulle stesse due unità Andrea/Genitori.
 
 - **Expense**: `date`, `description`, `category`, `amount`, `paid_by` (andrea|genitori),

@@ -1,4 +1,4 @@
-"""Shared-expense ledger API (SPEC 12) — the Splitwise-style side of the add-on.
+"""Shared-expense ledger API (SPEC 12) — the everyday-expenses side of the add-on.
 
 Every expense records who paid and how the cost is divided between the two
 units; the running balance is the sum of the unsettled shares. Bills computed

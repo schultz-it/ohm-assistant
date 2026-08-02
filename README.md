@@ -32,7 +32,7 @@ Clicca il badge, oppure manualmente:
 
 - **Bollette**: inserimento manuale o **estrazione AI dal PDF** (OpenAI/Anthropic),
   calcolo della ripartizione, allegato PDF, riepilogo stampabile.
-- **Spese**: registro delle spese condivise in stile Splitwise (idraulico, TARI,
+- **Spese**: registro delle spese condivise di casa (idraulico, TARI,
   giardiniere…) con **categoria proposta automaticamente** dalla descrizione e
   divisione a **metà, per percentuali o per cifre**. Le bollette calcolate si
   mandano nel registro con un bottone, così il saldo di casa è uno solo.

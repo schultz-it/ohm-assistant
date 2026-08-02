@@ -4,7 +4,7 @@ Ripartisce le bollette **luce** e **gas** di casa tra due unità abitative
 (**Andrea** e **Genitori**) usando i consumi reali dei contabilizzatori Zenner,
 dello Shelly Pro 3EM e dell'inverter fotovoltaico. Storico in dashboard e
 cruscotto live dei contabilizzatori. Include un **registro delle spese
-condivise** (tipo Splitwise) per tutto il resto delle spese di casa.
+condivise** per tutto il resto delle spese di casa.
 
 ## Come funziona la divisione
 
@@ -60,8 +60,8 @@ contatori: più giorni passano, più i periodi futuri sono coperti.
 
 ## Spese condivise
 
-La tab **Spese** è un registro tipo Splitwise per tutto ciò che non è una
-bolletta luce/gas: idraulico, TARI, giardiniere, rate condominiali…
+La tab **Spese** è un registro per dividere tutto ciò che non è una bolletta
+luce/gas: idraulico, TARI, giardiniere, rate condominiali…
 
 1. Scrivi la **descrizione**: la **categoria viene proposta da sola** in base
    alle parole chiave (tutto in locale, nessuna AI e nessuna connessione). Puoi
