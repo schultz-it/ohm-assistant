@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.2
+- **Icona e logo** dell'add-on (`icon.png`, `logo.png`): un quadrato diviso in
+  ambra e azzurro — i colori delle due unità — separati da un fulmine bianco.
+  Il logotipo è in ambra per restare leggibile sia sul tema chiaro sia su quello
+  scuro dello store. Sorgente rigenerabile in `tools/make_icons.py`.
+
 ## 1.4.1
 - Nuova categoria **🔁 Abbonamenti** (Netflix, Spotify, Prime, palestra,
   rinnovi…), che prima finivano in "Altro". "Abbonamento TV" e "Abbonamento
