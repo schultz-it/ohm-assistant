@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.3
+- **Corretta la cache che nascondeva le novità dopo un aggiornamento**:
+  `index.html` usciva senza header `Cache-Control`, così il browser applicava
+  la propria cache euristica e poteva continuare a servire la pagina vecchia
+  per giorni senza chiederne conferma — l'add-on risultava aggiornato ma
+  l'interfaccia restava quella di prima (è il motivo per cui la tab Spese non
+  compariva). Ora la pagina viene sempre rivalidata (`no-cache`, con ETag: la
+  risposta tipica è un 304) mentre i bundle, che hanno il nome con l'hash,
+  restano in cache per sempre.
+- **Versione in chiaro** nell'intestazione dell'app e in `GET /api/health`, per
+  vedere a colpo d'occhio quale versione sta girando dopo un aggiornamento.
+
 ## 1.4.2
 - **Icona e logo** dell'add-on (`icon.png`, `logo.png`): un quadrato diviso in
   ambra e azzurro — i colori delle due unità — separati da un fulmine bianco.

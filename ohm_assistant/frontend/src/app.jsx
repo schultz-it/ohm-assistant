@@ -1,4 +1,5 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
+import { get } from "./api.js";
 import { Bollette } from "./tabs/Bollette.jsx";
 import { Spese } from "./tabs/Spese.jsx";
 import { Storico } from "./tabs/Storico.jsx";
@@ -15,12 +16,18 @@ const TABS = [
 
 export function App() {
   const [tab, setTab] = useState("bollette");
+  // Versione in chiaro: dopo un aggiornamento si vede subito cosa sta girando.
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    get("api/health").then((h) => setVersion(h.version)).catch(() => {});
+  }, []);
 
   return (
     <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 pb-20">
       <header class="px-4 py-3 flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10">
         <span class="text-2xl">⚡</span>
         <h1 class="text-lg font-semibold">Ohm Assistant</h1>
+        {version && <span class="ml-auto text-xs text-gray-400">v{version}</span>}
       </header>
 
       <main class="max-w-xl mx-auto p-4">

@@ -4,6 +4,7 @@ Milestone 0: Ingress hello page + Supervisor API entity listing + sensor verify.
 Milestone 1: SQLite data layer + CRUD API for config and bills; the ingress page
              becomes a dev console until the SPA lands (M5).
 """
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -53,7 +54,9 @@ app.include_router(ai.router)
 @app.get("/api/health")
 async def health() -> dict:
     from .core.ha import has_token
-    return {"status": "ok", "supervisor_token": has_token()}
+    # ADDON_VERSION arriva dal run script (bashio); fuori dall'add-on non c'è.
+    return {"status": "ok", "supervisor_token": has_token(),
+            "version": os.environ.get("ADDON_VERSION") or "dev"}
 
 
 DEV_PAGE = """<!doctype html><html><head><meta charset="utf-8">
@@ -183,5 +186,24 @@ async def dev_console() -> str:
 
 # Serve the built SPA (Milestone 5). Mounted last so /api/* wins.
 FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+class SpaStatic(StaticFiles):
+    """Static files with cache headers that survive an add-on update.
+
+    Vite fingerprints the bundles, so ``assets/*`` can be cached forever. But
+    ``index.html`` is what points at them: served without a ``Cache-Control``
+    header (Starlette's default), the browser falls back to *heuristic*
+    caching and can keep replaying an old page for days without revalidating —
+    so a freshly updated add-on still shows the previous UI. ``no-cache`` means
+    "ask every time"; with the ETag the answer is a cheap 304.
+    """
+
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        resp = super().file_response(full_path, stat_result, scope, status_code)
+        resp.headers["Cache-Control"] = (
+            "no-cache" if str(full_path).endswith(".html")
+            else "public, max-age=31536000, immutable")
+        return resp
+
+
 if (FRONTEND_DIST / "index.html").exists():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="spa")
+    app.mount("/", SpaStatic(directory=FRONTEND_DIST, html=True), name="spa")
