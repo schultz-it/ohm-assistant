@@ -146,7 +146,8 @@ si cambia la formula.
 - **Bootstrap / bollette storiche**: lettura delle long-term statistics HA se disponibili,
   altrimenti inserimento manuale dei valori contatore per il periodo.
 
-## 7. UI — 4 tab (mobile-first)
+## 7. UI — tab (mobile-first)
+0. **Spese** — registro delle spese condivise, aggiunto in v1.4 (§12).
 1. **Bollette** — nuova bolletta luce/gas: carica PDF → estrazione AI *oppure* inserimento
    manuale; rivedi i valori; l'app calcola i delta e mostra **"Andrea paga X / Genitori
    pagano Y"** con dettaglio; salva (allega PDF in `/data`).
@@ -163,6 +164,47 @@ Provider da opzioni add-on (default OpenAI, come Petrichor). PDF → JSON strutt
 `billed`, `cost_total`, `period_start/end`, `canone_rai`, oneri. **Sempre proposta
 rivedibile**, fallback all'inserimento manuale. L'AI non calcola le ripartizioni, solo
 estrae i dati di input.
+
+## 8bis. Clima Eurotherm via Modbus TCP (v1.1)
+
+Il regolatore **Eurotherm SmartComfort 365** non passa da HA: l'add-on lo
+interroga direttamente in **Modbus TCP** (client interno, FC3/FC4, sola lettura).
+Mappa dal documento ufficiale *Modbus interface for home automation*, rev. 05.
+
+Un solo SmartControl365 risponde per tutto l'impianto; le parti si distinguono
+per indirizzo, non per IP o unit id:
+
+- **sistema** 50–59: seriale, data/ora, temperatura esterna (58, ×0,1 °C, i
+  negativi come 65536 − valore), numero di zone (59);
+- **zona i** (sottosistema, max 8) a `100 + i·130`: stagione (0 freddo,
+  1 caldo), modo zona (casa/spento/assente/vacanza), boost rinnovo aria, numero
+  e bitmap delle Smart Base che la compongono;
+- **Smart Base b** (max 8) a `1140 + b·3260`: id base/zona, sensori collegati e
+  maschera errori, tipo base (con/senza miscelazione), setpoint e temperatura di
+  mandata;
+- **stanza r della base b** (8 per base) a `1140 + b·3260 + 60 + r·400`:
+  temperatura, umidità, punto di rugiada, obiettivo, modo, temperatura manuale,
+  più la maschera errori del sensore (condensa, umidità alta, batterie…).
+
+Impianto di casa: tre Smart Base — Genitori, Andrea piano 1, Andrea piano 2 — con
+una macchina aria ciascuna (Deuclima-VMC 500 V + 2× 500 S). `POST /discover`
+percorre la topologia dichiarata dal regolatore e propone basi e stanze presenti.
+
+`POST /map` sonda lo spazio indirizzi (un campione ogni 8, poi allarga ogni
+riscontro fino al rifiuto) ed elenca le zone di registri esposte, marcando
+quelle fuori dai blocchi documentati: è il modo per stabilire empiricamente se
+esista altro oltre il manuale.
+
+**Le macchine aria non hanno registri nella rev. 05**: l'unico parametro aria
+esposto è il boost di rinnovo a livello di zona. Per questo esiste
+`POST /explore`, che spazza un intervallo di indirizzi (isolando per bisezione
+gli indirizzi che rispondono con eccezione Modbus) e mostra ogni registro
+leggibile; quelli riconosciuti si fissano nel Live (`config.custom`) con nome,
+scala e unità.
+
+Le letture sono diagnostiche e **non entrano nel calcolo §4**: la chiave di
+ripartizione resta quella delle quote di calore Zenner. L'assegnazione di base e
+stanza a un'unità abitativa serve solo al raggruppamento nel cruscotto Live.
 
 ## 9. Idee extra
 - Riepilogo stampabile/PDF per bolletta da condividere coi Genitori.
@@ -189,7 +231,7 @@ estrae i dati di input.
 - ACS: se non è misurata dallo Zenner e pesa, valutare in v2 una chiave dedicata.
 
 
-## 12. Registro spese condivise (v1.1)
+## 12. Registro spese condivise (v1.4)
 Modulo tipo Splitwise per le spese di casa che **non** sono bollette luce/gas (idraulico,
 TARI, giardiniere, condominio…), sulle stesse due unità Andrea/Genitori.
 
