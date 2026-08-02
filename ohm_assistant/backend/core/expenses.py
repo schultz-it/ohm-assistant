@@ -47,6 +47,10 @@ CATEGORIES: list[dict] = [
     {"id": "internet", "label": "Internet & TV", "icon": "📶", "keywords": [
         "internet", "fibra", "adsl", "wifi", "telefono", "tim", "vodafone",
         "fastweb", "iliad", "windtre", "canone rai", "abbonamento tv", "antenna"]},
+    {"id": "abbonamenti", "label": "Abbonamenti", "icon": "🔁", "keywords": [
+        "netflix", "spotify", "disney", "prime video", "amazon prime", "dazn",
+        "now tv", "palestra", "rinnovo", "streaming", "icloud", "google one"],
+     "weak": ["abbonamento", "abbonamenti", "mensile", "annuale"]},
     {"id": "assicurazione", "label": "Assicurazione", "icon": "🛡️", "keywords": [
         "assicurazione", "polizza", "rc fabbricato", "premio assicurativo"]},
     {"id": "tasse", "label": "Tasse", "icon": "🏛️", "keywords": [

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.1
+- Nuova categoria **🔁 Abbonamenti** (Netflix, Spotify, Prime, palestra,
+  rinnovi…), che prima finivano in "Altro". "Abbonamento TV" e "Abbonamento
+  internet" restano in Internet & TV.
+- Documentazione: la descrizione del registro spese non cita più Splitwise.
+
 ## 1.4.0
 - **Registro spese condivise** (nuova tab **Spese**, SPEC 12): spese di casa
   divise fra le due unità — descrizione, importo, data, chi ha pagato e
