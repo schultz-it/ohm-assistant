@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import models  # noqa: F401  (registers ORM models on Base)
-from .api import ai, bills, config, ha, live, snapshots, stats
+from .api import ai, bills, config, expenses, ha, live, snapshots, stats
 from .api.config import get_or_create
 from .core import ha as ha_core
 from .core import scheduler as sched
@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Ohm Assistant", lifespan=lifespan)
 app.include_router(config.router)
 app.include_router(bills.router)
+app.include_router(expenses.router)
 app.include_router(ha.router)
 app.include_router(snapshots.router)
 app.include_router(live.router)

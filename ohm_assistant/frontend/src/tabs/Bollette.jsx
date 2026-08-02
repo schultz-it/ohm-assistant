@@ -98,6 +98,25 @@ export function Bollette() {
     } catch (e) { setMsg({ ...msg, [bill.id]: { error: e.message } }); setBusy(null); }
   }
 
+  async function removeBill(bill) {
+    // Deleting the bill also drops the ledger entry generated from it.
+    if (bill.expense_id &&
+        !confirm("Questa bolletta è nel registro spese: eliminandola sparirà anche da lì. Procedere?"))
+      return;
+    await del(`api/bills/${bill.id}`);
+    load();
+  }
+
+  async function toExpense(bill) {
+    setBusy(bill.id);
+    try {
+      const r = await post(`api/bills/${bill.id}/to_expense`);
+      await load();
+      setMsg({ ...msg, [bill.id]: { text: `Aggiunta alle spese: ${cfg.genitori_name} ${eur(r.genitori_share)}` } });
+    } catch (e) { setMsg({ ...msg, [bill.id]: { error: e.message } }); }
+    setBusy(null);
+  }
+
   async function pickPdf(bill, e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -201,10 +220,15 @@ export function Bollette() {
             {b.pdf_path && <a class={btn} href={`api/bills/${b.id}/pdf`} target="_blank">Apri PDF</a>}
             {b.andrea_amount != null &&
               <a class={btn} href={`api/bills/${b.id}/report`} target="_blank">Riepilogo</a>}
+            {b.andrea_amount != null && (b.expense_id
+              ? <span class="text-xs text-emerald-600">🧮 nel registro spese</span>
+              : <button class={btn} disabled={busy === b.id} onClick={() => toExpense(b)}>
+                  🧮 Aggiungi alle spese
+                </button>)}
             {b.breakdown && (
               <button class={btn} onClick={() => setOpen(open === b.id ? null : b.id)}>Dettaglio</button>
             )}
-            <button class={btn + " ml-auto text-red-600"} onClick={() => del(`api/bills/${b.id}`).then(load)}>Elimina</button>
+            <button class={btn + " ml-auto text-red-600"} onClick={() => removeBill(b)}>Elimina</button>
           </div>
 
           {msg[b.id]?.needImport && (

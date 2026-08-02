@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.0
+- **Registro spese condivise** (nuova tab **Spese**, SPEC 12): spese di casa in
+  stile Splitwise fra le due unità — descrizione, importo, data, chi ha pagato e
+  divisione **a metà / per percentuali / per cifre**, con anteprima delle quote.
+  La **categoria è proposta automaticamente** dalla descrizione con un match su
+  parole chiave, in locale: niente AI, niente rete, nessun costo.
+- **Ponte bolletta → spese**: le bollette calcolate hanno il bottone
+  **🧮 Aggiungi alle spese** (`POST /api/bills/{id}/to_expense`), che le porta nel
+  registro con la ripartizione dei contatori come split a cifre fisse. Il flag
+  "saldato" resta sincronizzato nei due sensi e le bollette già nel registro non
+  vengono contate due volte nel saldo.
+- Saldo unificato: `GET /api/stats/summary` espone ora `outstanding_bills` e
+  `outstanding_expenses` oltre al totale, e Storico/Spese mostrano lo stesso
+  numero.
+- Nuove API `CRUD /api/expenses` + `/categories`, `/suggest`, `/summary`; nuova
+  tabella `expenses` (creata da sola all'avvio, nessuna migrazione manuale).
+
 ## 1.0.0 🎉
 - Prima release stabile.
 - Riepilogo bolletta stampabile/condivisibile: `GET /api/bills/{id}/report`

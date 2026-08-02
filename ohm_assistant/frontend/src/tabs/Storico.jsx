@@ -40,7 +40,11 @@ export function Storico() {
         <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
           {eur(sum.outstanding_genitori_to_andrea)}
         </div>
-        <div class="text-xs text-gray-400 mt-1">saldo delle bollette non ancora saldate</div>
+        <div class="text-xs text-gray-400 mt-1">
+          bollette {eur(sum.outstanding_bills)}
+          {Math.abs(sum.outstanding_expenses) >= 0.005 &&
+            ` · spese ${eur(sum.outstanding_expenses)}`}
+        </div>
       </div>
 
       <div class="grid grid-cols-3 gap-2">

@@ -1,11 +1,13 @@
 import { useState } from "preact/hooks";
 import { Bollette } from "./tabs/Bollette.jsx";
+import { Spese } from "./tabs/Spese.jsx";
 import { Storico } from "./tabs/Storico.jsx";
 import { Live } from "./tabs/Live.jsx";
 import { Setup } from "./tabs/Setup.jsx";
 
 const TABS = [
   { id: "bollette", label: "Bollette", icon: "🧾" },
+  { id: "spese", label: "Spese", icon: "🧮" },
   { id: "storico", label: "Storico", icon: "📊" },
   { id: "live", label: "Live", icon: "🌡️" },
   { id: "setup", label: "Setup", icon: "⚙️" },
@@ -23,6 +25,7 @@ export function App() {
 
       <main class="max-w-xl mx-auto p-4">
         {tab === "bollette" && <Bollette />}
+        {tab === "spese" && <Spese />}
         {tab === "storico" && <Storico />}
         {tab === "live" && <Live />}
         {tab === "setup" && <Setup />}

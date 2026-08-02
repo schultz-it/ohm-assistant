@@ -1,8 +1,8 @@
 """SQLAlchemy ORM models (SPEC 5)."""
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, JSON, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Date, DateTime, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
 
@@ -46,6 +46,45 @@ class Bill(Base):
     genitori_qty: Mapped[float | None] = mapped_column(default=None)
     f_andrea: Mapped[float | None] = mapped_column(default=None)
     breakdown: Mapped[dict | None] = mapped_column(JSON, default=None)
+
+    # Set once the computed bill is pushed to the shared-expense ledger (SPEC 12).
+    expense: Mapped["Expense | None"] = relationship(
+        back_populates="bill", cascade="all, delete-orphan", uselist=False
+    )
+
+    @property
+    def expense_id(self) -> int | None:
+        return self.expense.id if self.expense else None
+
+
+class Expense(Base):
+    """A shared household expense split between the two units (SPEC 12).
+
+    ``amount`` is what was actually paid, by ``paid_by``; ``andrea_share`` +
+    ``genitori_share`` always add up to it exactly (the engine derives the
+    second share by subtraction, so cents never go missing). A row with
+    ``bill_id`` set was generated from a computed bill and carries its split.
+    """
+    __tablename__ = "expenses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    date: Mapped[date] = mapped_column(Date, index=True)
+    description: Mapped[str]
+    category: Mapped[str] = mapped_column(default="altro")
+    amount: Mapped[float]
+    paid_by: Mapped[str] = mapped_column(default="andrea")     # andrea | genitori
+    split_mode: Mapped[str] = mapped_column(default="equal")   # equal | percent | amount
+    split_config: Mapped[dict | None] = mapped_column(JSON, default=None)
+    andrea_share: Mapped[float] = mapped_column(default=0.0)
+    genitori_share: Mapped[float] = mapped_column(default=0.0)
+    settled: Mapped[bool] = mapped_column(default=False)
+    notes: Mapped[str | None] = mapped_column(default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    bill_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bills.id"), default=None, unique=True
+    )
+    bill: Mapped["Bill | None"] = relationship(back_populates="expense")
 
 
 class MeterSnapshot(Base):

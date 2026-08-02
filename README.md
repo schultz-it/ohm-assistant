@@ -32,8 +32,12 @@ Clicca il badge, oppure manualmente:
 
 - **Bollette**: inserimento manuale o **estrazione AI dal PDF** (OpenAI/Anthropic),
   calcolo della ripartizione, allegato PDF, riepilogo stampabile.
+- **Spese**: registro delle spese condivise in stile Splitwise (idraulico, TARI,
+  giardiniere…) con **categoria proposta automaticamente** dalla descrizione e
+  divisione a **metà, per percentuali o per cifre**. Le bollette calcolate si
+  mandano nel registro con un bottone, così il saldo di casa è uno solo.
 - **Storico**: totali per unità, grafico dello split per bolletta, €/kWh e
-  **saldo cumulativo** con spunta "saldato".
+  **saldo cumulativo** (bollette + spese) con spunta "saldato".
 - **Live**: contabilizzatori Andrea/Genitori in tempo reale + fotovoltaico.
 - **Setup**: mappa sensori editabile con verifica, nomi unità, canone RAI, AI.
 - **Bollette storiche**: import dei consumi dallo storico long-term di HA.

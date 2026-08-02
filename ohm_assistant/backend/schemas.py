@@ -1,4 +1,5 @@
 """Pydantic request/response schemas."""
+import datetime as dt
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -69,3 +70,48 @@ class BillOut(BaseModel):
     genitori_qty: float | None
     f_andrea: float | None
     breakdown: dict | None
+    expense_id: int | None = None   # set once pushed to the expense ledger
+
+
+# ---- Expense (shared-expense ledger, SPEC 12) ----
+# The field is called ``date``, which shadows the imported name inside the class
+# body once a default is assigned — hence the ``dt.date`` annotations below.
+class ExpenseIn(BaseModel):
+    date: dt.date
+    description: str = Field(min_length=1)
+    amount: float = Field(gt=0)
+    category: str | None = None        # None / unknown → proposed from description
+    paid_by: str = Field(default="andrea", pattern="^(andrea|genitori)$")
+    split_mode: str = Field(default="equal", pattern="^(equal|percent|amount)$")
+    split_config: dict | None = None   # {"andrea": x, "genitori": y}
+    notes: str | None = None
+
+
+class ExpenseUpdate(BaseModel):
+    date: dt.date | None = None
+    description: str | None = None
+    amount: float | None = None
+    category: str | None = None
+    paid_by: str | None = Field(default=None, pattern="^(andrea|genitori)$")
+    split_mode: str | None = Field(default=None, pattern="^(equal|percent|amount)$")
+    split_config: dict | None = None
+    settled: bool | None = None
+    notes: str | None = None
+
+
+class ExpenseOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    date: dt.date
+    description: str
+    category: str
+    amount: float
+    paid_by: str
+    split_mode: str
+    split_config: dict | None
+    andrea_share: float
+    genitori_share: float
+    settled: bool
+    notes: str | None
+    bill_id: int | None
+    created_at: datetime

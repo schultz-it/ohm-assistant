@@ -3,7 +3,8 @@
 Ripartisce le bollette **luce** e **gas** di casa tra due unità abitative
 (**Andrea** e **Genitori**) usando i consumi reali dei contabilizzatori Zenner,
 dello Shelly Pro 3EM e dell'inverter fotovoltaico. Storico in dashboard e
-cruscotto live dei contabilizzatori.
+cruscotto live dei contabilizzatori. Include un **registro delle spese
+condivise** (tipo Splitwise) per tutto il resto delle spese di casa.
 
 ## Come funziona la divisione
 
@@ -54,12 +55,42 @@ contatori: più giorni passano, più i periodi futuri sono coperti.
      di Home Assistant e ricalcola.
 4. **Riepilogo** apre una pagina stampabile da condividere; **Allega PDF**
    salva la bolletta originale.
+5. **🧮 Aggiungi alle spese** manda la bolletta calcolata nel registro delle
+   spese condivise (vedi sotto), così il saldo di casa è uno solo.
+
+## Spese condivise
+
+La tab **Spese** è un registro tipo Splitwise per tutto ciò che non è una
+bolletta luce/gas: idraulico, TARI, giardiniere, rate condominiali…
+
+1. Scrivi la **descrizione**: la **categoria viene proposta da sola** in base
+   alle parole chiave (tutto in locale, nessuna AI e nessuna connessione). Puoi
+   sempre cambiarla dal menu.
+2. Metti **importo** e **data**, indica **chi ha pagato**.
+3. Scegli come dividere:
+   - **Metà** — 50/50;
+   - **Percentuali** — scrivi la percentuale di uno, l'altra si completa a 100;
+   - **Cifre** — scrivi la cifra di uno, l'altra è il resto dell'importo.
+   L'anteprima mostra subito le due quote.
+4. **Aggiungi spesa**. Chi non ha pagato resta in debito della sua quota finché
+   non spunti **Saldata**.
+
+In cima trovi il **saldo di casa**: la freccia indica chi deve a chi, e sotto il
+dettaglio fra spese e bollette non ancora finite nel registro.
+
+Le spese arrivate da una bolletta hanno il segno 🧾: sono la ripartizione
+calcolata dai contatori, con Andrea come pagante. Spuntarle come saldate segna
+saldata anche la bolletta (e viceversa), e una bolletta finita nel registro non
+viene contata due volte nel saldo. Eliminando la bolletta sparisce anche la
+spesa collegata; eliminando solo la spesa la bolletta resta e può essere
+rimandata nel registro.
 
 ## Storico
 
 La tab **Storico** mostra:
 - il **saldo cumulativo** "Genitori devono ad Andrea €X" (Andrea anticipa le
-  bollette; ogni quota resta dovuta finché non la segni **Saldato**);
+  bollette; ogni quota resta dovuta finché non la segni **Saldato**), che
+  comprende anche le spese condivise;
 - i **totali** per unità;
 - un **grafico** dello split per bolletta e il **€/kWh**.
 

@@ -14,6 +14,8 @@ from ..core import engine, snapshot
 from ..db import DATA_DIR, get_db
 from .config import get_or_create
 
+TYPE_LABEL = {"electric": "Luce", "gas": "Gas"}
+
 router = APIRouter(prefix="/api/bills", tags=["bills"])
 PDF_DIR = DATA_DIR / "pdfs"
 
@@ -51,8 +53,12 @@ def get_bill(bill_id: int, db: Session = Depends(get_db)):
 @router.put("/{bill_id}", response_model=schemas.BillOut)
 def update_bill(bill_id: int, patch: schemas.BillUpdate, db: Session = Depends(get_db)):
     bill = _get(db, bill_id)
-    for k, v in patch.model_dump(exclude_unset=True).items():
+    data = patch.model_dump(exclude_unset=True)
+    for k, v in data.items():
         setattr(bill, k, v)
+    # Keep the ledger entry generated from this bill in sync (see expenses API).
+    if "settled" in data and bill.expense is not None:
+        bill.expense.settled = bill.settled
     db.commit()
     return bill
 
@@ -86,6 +92,44 @@ def compute_bill(bill_id: int, persist: bool = True, db: Session = Depends(get_d
         db.commit()
     res["deltas"] = {k: (v["value"] if v else None) for k, v in deltas.items()}
     return res
+
+
+@router.post("/{bill_id}/to_expense", status_code=201)
+def to_expense(bill_id: int, db: Session = Depends(get_db)):
+    """Push a computed bill into the shared-expense ledger (SPEC 12).
+
+    The expense carries the ripartition verbatim as a fixed-amount split, paid
+    by Andrea (who fronts the utilities), so the household balance covers bills
+    and everyday expenses in one place. Genitori's share is derived by
+    subtraction: the two engine amounts are rounded independently and could
+    otherwise differ from the bill total by a cent.
+    """
+    bill = _get(db, bill_id)
+    if bill.andrea_amount is None:
+        raise HTTPException(422, "bolletta non ancora calcolata: premi «Calcola» prima")
+    if bill.expense is not None:
+        raise HTTPException(409, "bolletta già presente nel registro spese")
+
+    amount = round(bill.cost_total, 2)
+    andrea = round(bill.andrea_amount, 2)
+    kind = TYPE_LABEL.get(bill.type, bill.type)
+    exp = models.Expense(
+        date=bill.period_end,
+        description=f"Bolletta {kind.lower()} {bill.period_start} → {bill.period_end}",
+        category="gas" if bill.type == "gas" else "luce",
+        amount=amount,
+        paid_by="andrea",
+        split_mode="amount",
+        split_config={"andrea": andrea, "genitori": round(amount - andrea, 2)},
+        andrea_share=andrea,
+        genitori_share=round(amount - andrea, 2),
+        settled=bill.settled,
+        bill_id=bill.id,
+    )
+    db.add(exp)
+    db.commit()
+    return {"expense_id": exp.id, "andrea_share": exp.andrea_share,
+            "genitori_share": exp.genitori_share}
 
 
 @router.post("/{bill_id}/pdf")
@@ -124,7 +168,7 @@ def report(bill_id: int, db: Session = Depends(get_db)):
                             "calcolata. Premi «Calcola» prima di stampare.</p>")
     bd = bill.breakdown or {}
     unit = "Smc" if bill.type == "gas" else "kWh"
-    kind = "Gas" if bill.type == "gas" else "Luce"
+    kind = TYPE_LABEL.get(bill.type, bill.type)
 
     rows = [("Periodo", f"{bill.period_start} → {bill.period_end}"),
             (f"{kind} fatturati", f"{bill.billed} {unit}"),

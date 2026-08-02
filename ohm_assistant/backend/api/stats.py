@@ -15,8 +15,9 @@ def summary(db: Session = Depends(get_db)):
     """Totals per party/type + the cumulative balance Genitori owe Andrea.
 
     Andrea fronts the bills; each computed bill's ``genitori_amount`` is owed to
-    Andrea until marked settled. The outstanding balance is the sum over the
-    unsettled computed bills.
+    Andrea until marked settled. Bills pushed to the expense ledger are counted
+    there instead of here — otherwise they would be owed twice — so the headline
+    balance is ``bills not in the ledger`` + ``the ledger's net``.
     """
     cfg = get_or_create(db)
     bills = db.scalars(
@@ -26,14 +27,19 @@ def summary(db: Session = Depends(get_db)):
     tot = {"andrea": 0.0, "genitori": 0.0}
     by_type = {"electric": {"andrea": 0.0, "genitori": 0.0},
                "gas": {"andrea": 0.0, "genitori": 0.0}}
-    outstanding = 0.0
+    outstanding_bills = 0.0
     for b in bills:
         tot["andrea"] += b.andrea_amount
         tot["genitori"] += b.genitori_amount
         by_type[b.type]["andrea"] += b.andrea_amount
         by_type[b.type]["genitori"] += b.genitori_amount
-        if not b.settled:
-            outstanding += b.genitori_amount
+        if not b.settled and b.expense is None:
+            outstanding_bills += b.genitori_amount
+
+    outstanding_expenses = 0.0
+    for e in db.scalars(select(models.Expense).where(~models.Expense.settled)):
+        outstanding_expenses += (e.genitori_share if e.paid_by == "andrea"
+                                 else -e.andrea_share)
 
     rnd = lambda d: {k: round(v, 2) for k, v in d.items()}
     return {
@@ -41,5 +47,8 @@ def summary(db: Session = Depends(get_db)):
         "count": len(bills),
         "totals": rnd(tot),
         "by_type": {t: rnd(v) for t, v in by_type.items()},
-        "outstanding_genitori_to_andrea": round(outstanding, 2),
+        "outstanding_bills": round(outstanding_bills, 2),
+        "outstanding_expenses": round(outstanding_expenses, 2),
+        "outstanding_genitori_to_andrea":
+            round(outstanding_bills + outstanding_expenses, 2),
     }

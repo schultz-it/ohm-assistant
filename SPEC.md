@@ -187,3 +187,22 @@ estrae i dati di input.
   sensori elencati non la citano → assunzione: nessuna batteria; da validare a runtime).
 - 3° canale dello Shelly Pro 3EM: cosa misura (per completare la diagnostica).
 - ACS: se non è misurata dallo Zenner e pesa, valutare in v2 una chiave dedicata.
+
+
+## 12. Registro spese condivise (v1.1)
+Modulo tipo Splitwise per le spese di casa che **non** sono bollette luce/gas (idraulico,
+TARI, giardiniere, condominio…), sulle stesse due unità Andrea/Genitori.
+
+- **Expense**: `date`, `description`, `category`, `amount`, `paid_by` (andrea|genitori),
+  `split_mode` (equal|percent|amount) + `split_config`, `andrea_share`, `genitori_share`,
+  `settled`, `notes`, `bill_id` (nullable), `created_at`.
+- **Categoria proposta** in locale da match su parole chiave (`core/expenses.py`), niente
+  AI né rete: le keyword *deboli* (es. "manutenzione") scattano solo se nessuna categoria
+  più specifica ha fatto match. È sempre una proposta modificabile.
+- **Divisione**: metà, percentuali o cifre fisse. Solo la quota di Andrea viene arrotondata,
+  quella dei Genitori è il resto → le due quote sommano sempre esattamente all'importo.
+- **Saldo**: `net` = somma delle quote non saldate, con segno (positivo = Genitori → Andrea).
+- **Ponte bolletta → spesa**: `POST /api/bills/{id}/to_expense` crea una spesa che porta la
+  ripartizione calcolata come split a cifre fisse, pagata da Andrea. Una bolletta finita nel
+  registro **non** viene più contata nel saldo bollette (niente doppio conteggio) e il flag
+  `settled` resta sincronizzato nei due sensi. Eliminare la bolletta elimina la sua spesa.
