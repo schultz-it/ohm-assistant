@@ -133,8 +133,9 @@ class BillOut(BaseModel):
 # body once a default is assigned — hence the ``dt.date`` annotations below.
 class ExpenseIn(BaseModel):
     date: dt.date
+    kind: str = Field(default="expense", pattern="^(expense|income)$")
     description: str = Field(min_length=1)
-    amount: float = Field(gt=0)
+    amount: float = Field(gt=0)        # always positive: the sign comes from kind
     category: str | None = None        # None / unknown → proposed from description
     paid_by: str = Field(default="andrea", pattern="^(andrea|genitori)$")
     split_mode: str = Field(default="equal", pattern="^(equal|percent|amount)$")
@@ -144,6 +145,7 @@ class ExpenseIn(BaseModel):
 
 class ExpenseUpdate(BaseModel):
     date: dt.date | None = None
+    kind: str | None = Field(default=None, pattern="^(expense|income)$")
     description: str | None = None
     amount: float | None = None
     category: str | None = None
@@ -158,6 +160,7 @@ class ExpenseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     date: dt.date
+    kind: str
     description: str
     category: str
     amount: float

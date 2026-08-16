@@ -40,6 +40,8 @@ def get_db():
 _MIGRATIONS: list[tuple[str, str, str]] = [
     ("bills", "settled", "BOOLEAN DEFAULT 0"),
     ("config", "eurotherm", "JSON DEFAULT '{}'"),
+    # Ledger rows that predate incomes are all expenses.
+    ("expenses", "kind", "VARCHAR DEFAULT 'expense'"),
 ]
 
 

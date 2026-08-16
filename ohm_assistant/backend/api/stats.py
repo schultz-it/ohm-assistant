@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
+from ..core import expenses as core_expenses
 from ..db import get_db
 from .config import get_or_create
 
@@ -36,10 +37,12 @@ def summary(db: Session = Depends(get_db)):
         if not b.settled and b.expense is None:
             outstanding_bills += b.genitori_amount
 
+    # The ledger's own net: expenses put the non-payer in debt, incomes (GSE,
+    # tax refunds) put whoever cashed them in debt for the other's quota.
     outstanding_expenses = 0.0
     for e in db.scalars(select(models.Expense).where(~models.Expense.settled)):
-        outstanding_expenses += (e.genitori_share if e.paid_by == "andrea"
-                                 else -e.andrea_share)
+        outstanding_expenses += core_expenses.signed_balance(
+            e.kind, e.paid_by, e.andrea_share, e.genitori_share)
 
     rnd = lambda d: {k: round(v, 2) for k, v in d.items()}
     return {

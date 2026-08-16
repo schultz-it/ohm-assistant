@@ -235,15 +235,40 @@ stanza a un'unità abitativa serve solo al raggruppamento nel cruscotto Live.
 Modulo per dividere le spese di casa che **non** sono bollette luce/gas (idraulico,
 TARI, giardiniere, condominio…), sulle stesse due unità Andrea/Genitori.
 
-- **Expense**: `date`, `description`, `category`, `amount`, `paid_by` (andrea|genitori),
-  `split_mode` (equal|percent|amount) + `split_config`, `andrea_share`, `genitori_share`,
-  `settled`, `notes`, `bill_id` (nullable), `created_at`.
+- **Expense**: `date`, `kind` (expense|income, v1.5), `description`, `category`, `amount`,
+  `paid_by` (andrea|genitori), `split_mode` (equal|percent|amount) + `split_config`,
+  `andrea_share`, `genitori_share`, `settled`, `notes`, `bill_id` (nullable), `created_at`.
 - **Categoria proposta** in locale da match su parole chiave (`core/expenses.py`), niente
   AI né rete: le keyword *deboli* (es. "manutenzione") scattano solo se nessuna categoria
   più specifica ha fatto match. È sempre una proposta modificabile.
 - **Divisione**: metà, percentuali o cifre fisse. Solo la quota di Andrea viene arrotondata,
   quella dei Genitori è il resto → le due quote sommano sempre esattamente all'importo.
 - **Saldo**: `net` = somma delle quote non saldate, con segno (positivo = Genitori → Andrea).
+
+### 12bis. Entrate (v1.5)
+Nello stesso registro entrano anche i **soldi in arrivo** — bonifico GSE del fotovoltaico,
+rimborso IRPEF, indennizzi — con `kind = "income"`. Tutto il resto è identico alle spese
+(stesso split, stessa spunta "saldata", stesso `paid_by`, che per un'entrata è *chi l'ha
+incassata*); cambia solo il **segno nel saldo**:
+
+```
+expense:  chi non ha pagato deve la propria quota      → net += quota dell'altro
+income:   chi ha incassato deve la quota dell'altro    → net −= quota dell'altro
+```
+`core.signed_balance()` è l'unico punto in cui il segno si applica, usato sia dal
+riepilogo del registro sia da `/api/stats/summary`, così Spese e Storico non possono
+divergere. Esempio: Andrea incassa 400 € dal GSE divisi a metà → i 200 € dei Genitori
+scalano dal loro debito.
+
+- `amount` resta **sempre positivo**: il verso lo dà `kind`, mai un importo negativo.
+- **Categorie separate** per le entrate (`INCOME_CATEGORIES`: Fotovoltaico, Rimborso tasse,
+  Bonus & detrazioni, Rimborsi vari, Affitto, Altro), con id disgiunti da quelli delle
+  spese perché una categoria non significhi due cose diverse. La proposta automatica
+  lavora sulla lista del `kind` scelto ("Bonifico GSE" propone Fotovoltaico solo fra le
+  entrate).
+- Totali di spese ed entrate restano in **bucket distinti** nel riepilogo (`paid`/`received`,
+  `by_category`/`income_by_category`): i soldi usciti non si sommano mai a quelli entrati.
+- Le righe create prima della v1.5 sono spese (micro-migrazione con default `expense`).
 - **Ponte bolletta → spesa**: `POST /api/bills/{id}/to_expense` crea una spesa che porta la
   ripartizione calcolata come split a cifre fisse, pagata da Andrea. Una bolletta finita nel
   registro **non** viene più contata nel saldo bollette (niente doppio conteggio) e il flag

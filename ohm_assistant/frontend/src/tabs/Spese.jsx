@@ -3,6 +3,7 @@ import { get, post, put, del, eur } from "../api.js";
 
 const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4";
 const btnP = "px-3 py-1.5 rounded-lg bg-amber-500 text-white text-sm font-medium disabled:opacity-50";
+const btnI = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-50";
 const inp = "w-full px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm";
 const lbl = "text-xs text-gray-500 dark:text-gray-400";
 
@@ -16,8 +17,15 @@ const MODES = [
   { id: "amount", label: "Cifre" },
 ];
 
-const emptyForm = () => ({
-  date: today(), description: "", amount: "", category: "",
+// Money out and money in share the whole form: only the wording and the sign
+// in the balance change (an income cashed by one unit is owed to the other).
+const KINDS = [
+  { id: "expense", label: "Spesa", icon: "🧾" },
+  { id: "income", label: "Entrata", icon: "💰" },
+];
+
+const emptyForm = (kind = "expense") => ({
+  kind, date: today(), description: "", amount: "", category: "",
   paid_by: "andrea", split_mode: "equal", pa: 50, aa: "", notes: "",
 });
 
@@ -40,7 +48,7 @@ export function Spese() {
   const [items, setItems] = useState([]);
   const [sum, setSum] = useState(null);
   const [stats, setStats] = useState(null);
-  const [cats, setCats] = useState([]);
+  const [cats, setCats] = useState({ expense: [], income: [] });
   const [form, setForm] = useState(emptyForm());
   const [catTouched, setCatTouched] = useState(false);
   const [hint, setHint] = useState(null);   // category proposed from the description
@@ -48,8 +56,10 @@ export function Spese() {
   const [busy, setBusy] = useState(false);
   const [showSettled, setShowSettled] = useState(false);
 
+  // Ids never collide between the two lists, so one lookup covers both.
   const byId = useMemo(
-    () => Object.fromEntries(cats.map((c) => [c.id, c])), [cats]);
+    () => Object.fromEntries(
+      [...cats.expense, ...cats.income].map((c) => [c.id, c])), [cats]);
 
   const load = () =>
     Promise.all([get("api/expenses"), get("api/expenses/summary"), get("api/stats/summary")])
@@ -58,14 +68,17 @@ export function Spese() {
 
   useEffect(() => {
     load();
-    get("api/expenses/categories").then((d) => setCats(d.categories)).catch(() => {});
+    get("api/expenses/categories")
+      .then((d) => setCats(d.by_kind || { expense: d.categories, income: [] }))
+      .catch(() => {});
   }, []);
 
   // Propose a category while typing (local keyword match, debounced).
   useEffect(() => {
     if (catTouched || !form.description.trim()) { setHint(null); return; }
     const t = setTimeout(() => {
-      get(`api/expenses/suggest?description=${encodeURIComponent(form.description)}`)
+      get(`api/expenses/suggest?kind=${form.kind}` +
+          `&description=${encodeURIComponent(form.description)}`)
         .then((r) => {
           setHint(r.matched ? r.category : null);
           if (r.matched) setForm((f) => ({ ...f, category: r.category }));
@@ -73,11 +86,20 @@ export function Spese() {
         .catch(() => {});
     }, 350);
     return () => clearTimeout(t);
-  }, [form.description, catTouched]);
+  }, [form.description, form.kind, catTouched]);
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const [prevA, prevG] = previewShares(form);
   const names = sum?.names || { andrea: "Andrea", genitori: "Genitori" };
+  const isIncome = form.kind === "income";
+
+  // Switching kind keeps what was typed but drops the category: the two lists
+  // are disjoint, so the old one no longer means anything.
+  const setKind = (kind) => {
+    setForm({ ...form, kind, category: "" });
+    setCatTouched(false);
+    setHint(null);
+  };
 
   async function add(e) {
     e.preventDefault();
@@ -85,6 +107,7 @@ export function Spese() {
     const amount = r2(num(form.amount));
     const body = {
       date: form.date,
+      kind: form.kind,
       description: form.description.trim(),
       amount,
       category: form.category || null,
@@ -98,7 +121,7 @@ export function Spese() {
       body.split_config = { andrea: r2(num(form.aa)), genitori: r2(amount - num(form.aa)) };
     try {
       await post("api/expenses", body);
-      setForm(emptyForm()); setCatTouched(false); setHint(null);
+      setForm(emptyForm(form.kind)); setCatTouched(false); setHint(null);
       await load();
     } catch (e2) { setErr(e2.message); }
     setBusy(false);
@@ -112,7 +135,7 @@ export function Spese() {
   async function remove(x) {
     const q = x.bill_id
       ? "Togliere questa bolletta dal registro spese? La bolletta resta nella tab Bollette."
-      : "Eliminare la spesa?";
+      : x.kind === "income" ? "Eliminare l'entrata?" : "Eliminare la spesa?";
     if (!confirm(q)) return;
     await del(`api/expenses/${x.id}`);
     load();
@@ -143,16 +166,33 @@ export function Spese() {
           </>
         )}
         <div class="text-xs text-gray-400 mt-1">
-          spese {eur(Math.abs(sum.net))}
+          registro {eur(Math.abs(sum.net))}
+          {sum.income_count > 0 &&
+            ` (entrate ${eur(sum.received.andrea + sum.received.genitori)})`}
           {stats && Math.abs(stats.outstanding_bills) >= 0.005 &&
             ` · bollette non in registro ${eur(stats.outstanding_bills)}`}
         </div>
       </div>
 
       <form class={card + " space-y-2"} onSubmit={add}>
-        <div class="font-semibold">Nuova spesa</div>
+        <div class="flex gap-2">
+          {KINDS.map((k) => (
+            <button key={k.id} type="button" onClick={() => setKind(k.id)}
+                    class={`flex-1 py-1.5 rounded-lg text-sm border ${
+                      form.kind === k.id
+                        ? k.id === "income"
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-amber-500 text-white border-amber-500"
+                        : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"}`}>
+              {k.icon} {k.label}
+            </button>
+          ))}
+        </div>
 
-        <input class={inp} placeholder="Descrizione (es. idraulico, TARI, giardiniere)"
+        <input class={inp}
+               placeholder={isIncome
+                 ? "Descrizione (es. bonifico GSE, rimborso IRPEF)"
+                 : "Descrizione (es. idraulico, TARI, giardiniere)"}
                value={form.description} onInput={set("description")} required />
 
         <div class="grid grid-cols-2 gap-2">
@@ -175,21 +215,23 @@ export function Spese() {
           <select class={inp} value={form.category}
                   onChange={(e) => { setCatTouched(true); setForm({ ...form, category: e.target.value }); }}>
             <option value="">— proponi tu —</option>
-            {cats.map((c) => (
+            {(cats[form.kind] || []).map((c) => (
               <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <div class={lbl}>Pagato da</div>
+          <div class={lbl}>{isIncome ? "Ricevuto da" : "Pagato da"}</div>
           <div class="flex gap-2">
             {["andrea", "genitori"].map((p) => (
               <button key={p} type="button"
                       onClick={() => setForm({ ...form, paid_by: p })}
                       class={`flex-1 py-1.5 rounded-lg text-sm border ${
                         form.paid_by === p
-                          ? "bg-amber-500 text-white border-amber-500"
+                          ? isIncome
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-amber-500 text-white border-amber-500"
                           : "border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"}`}>
                 {names[p]}
               </button>
@@ -255,14 +297,24 @@ export function Spese() {
             <div class="font-semibold text-sky-700 dark:text-sky-300">{eur(prevG)}</div>
           </div>
         </div>
+        {isIncome && (
+          <div class="text-xs text-gray-500">
+            Quota di {form.paid_by === "andrea" ? names.genitori : names.andrea}:
+            {" "}<span class="font-medium">
+              {eur(form.paid_by === "andrea" ? prevG : prevA)}
+            </span>, che scala dal debito.
+          </div>
+        )}
 
         <input class={inp} placeholder="Note (opzionale)" value={form.notes} onInput={set("notes")} />
-        <button class={btnP} type="submit" disabled={busy}>{busy ? "…" : "Aggiungi spesa"}</button>
+        <button class={isIncome ? btnI : btnP} type="submit" disabled={busy}>
+          {busy ? "…" : isIncome ? "Aggiungi entrata" : "Aggiungi spesa"}
+        </button>
         {err && <div class="text-red-600 text-sm">{err}</div>}
       </form>
 
       <div class="flex items-center justify-between">
-        <div class="font-semibold">Spese</div>
+        <div class="font-semibold">Spese ed entrate</div>
         <label class="flex items-center gap-1 text-xs text-gray-500">
           <input type="checkbox" checked={showSettled}
                  onChange={() => setShowSettled(!showSettled)} />
@@ -273,12 +325,14 @@ export function Spese() {
       {visible.length === 0 && (
         <div class="text-center text-gray-500 py-10">
           <div class="text-4xl mb-2">🧮</div>
-          {items.length ? "Nessuna spesa da saldare." : "Nessuna spesa registrata."}
+          {items.length ? "Niente da saldare." : "Nessuna spesa registrata."}
         </div>
       )}
 
       {visible.map((x) => {
         const c = byId[x.category] || { icon: "📌", label: x.category };
+        const income = x.kind === "income";
+        // Same number either way — the share of whoever was not on the transfer.
         const owed = x.paid_by === "andrea" ? x.genitori_share : x.andrea_share;
         const who = x.paid_by === "andrea" ? names.genitori : names.andrea;
         return (
@@ -288,10 +342,13 @@ export function Spese() {
                 <span class="mr-1">{c.icon}</span>{x.description}
                 {x.bill_id && <span class="ml-1 text-xs text-gray-400">🧾</span>}
               </div>
-              <div class="font-semibold shrink-0">{eur(x.amount)}</div>
+              <div class={"font-semibold shrink-0 " +
+                          (income ? "text-emerald-600 dark:text-emerald-400" : "")}>
+                {income ? "+" : ""}{eur(x.amount)}
+              </div>
             </div>
             <div class="text-xs text-gray-500 mt-0.5">
-              {x.date} · {c.label} · pagato da {names[x.paid_by]}
+              {x.date} · {c.label} · {income ? "ricevuto" : "pagato"} da {names[x.paid_by]}
             </div>
             <div class="text-xs text-gray-500">
               {names.andrea} {eur(x.andrea_share)} · {names.genitori} {eur(x.genitori_share)}
@@ -299,7 +356,9 @@ export function Spese() {
             {x.notes && <div class="text-xs text-gray-500 mt-1">{x.notes}</div>}
             <div class="flex items-center gap-3 mt-2">
               <span class="text-xs text-gray-500">
-                {x.settled ? "saldata" : `${who} ${eur(owed)} da saldare`}
+                {x.settled ? "saldata"
+                  : income ? `${eur(owed)} spettante a ${who}`
+                  : `${who} ${eur(owed)} da saldare`}
               </span>
               <label class="flex items-center gap-1 text-xs ml-auto">
                 <input type="checkbox" checked={x.settled} onChange={() => toggle(x)} />

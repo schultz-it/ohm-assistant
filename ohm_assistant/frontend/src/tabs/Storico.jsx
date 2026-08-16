@@ -43,7 +43,7 @@ export function Storico() {
         <div class="text-xs text-gray-400 mt-1">
           bollette {eur(sum.outstanding_bills)}
           {Math.abs(sum.outstanding_expenses) >= 0.005 &&
-            ` · spese ${eur(sum.outstanding_expenses)}`}
+            ` · registro spese ${eur(sum.outstanding_expenses)}`}
         </div>
       </div>
 

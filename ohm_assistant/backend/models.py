@@ -60,20 +60,25 @@ class Bill(Base):
 
 
 class Expense(Base):
-    """A shared household expense split between the two units (SPEC 12).
+    """A shared household expense or income split between the two units (SPEC 12).
 
-    ``amount`` is what was actually paid, by ``paid_by``; ``andrea_share`` +
-    ``genitori_share`` always add up to it exactly (the engine derives the
-    second share by subtraction, so cents never go missing). A row with
-    ``bill_id`` set was generated from a computed bill and carries its split.
+    ``amount`` is what was actually paid — or, for a ``kind`` of ``income``,
+    cashed — by ``paid_by``; ``andrea_share`` + ``genitori_share`` always add up
+    to it exactly (the engine derives the second share by subtraction, so cents
+    never go missing). An income (GSE transfer, tax refund) carries the same
+    fields with the opposite sign in the balance: the party who received it owes
+    the other its share. A row with ``bill_id`` set was generated from a computed
+    bill and carries its split.
     """
     __tablename__ = "expenses"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     date: Mapped[date] = mapped_column(Date, index=True)
+    kind: Mapped[str] = mapped_column(default="expense")        # expense | income
     description: Mapped[str]
     category: Mapped[str] = mapped_column(default="altro")
     amount: Mapped[float]
+    # Who paid it (expense) or who received it (income).
     paid_by: Mapped[str] = mapped_column(default="andrea")     # andrea | genitori
     split_mode: Mapped[str] = mapped_column(default="equal")   # equal | percent | amount
     split_config: Mapped[dict | None] = mapped_column(JSON, default=None)

@@ -4,7 +4,8 @@ Ripartisce le bollette **luce** e **gas** di casa tra due unità abitative
 (**Andrea** e **Genitori**) usando i consumi reali dei contabilizzatori Zenner,
 dello Shelly Pro 3EM e dell'inverter fotovoltaico. Storico in dashboard e
 cruscotto live dei contabilizzatori. Include un **registro delle spese
-condivise** per tutto il resto delle spese di casa.
+condivise** per tutto il resto delle spese di casa — e delle **entrate** da
+dividere, come il bonifico GSE del fotovoltaico o un rimborso di tasse.
 
 ## Come funziona la divisione
 
@@ -61,22 +62,43 @@ contatori: più giorni passano, più i periodi futuri sono coperti.
 ## Spese condivise
 
 La tab **Spese** è un registro per dividere tutto ciò che non è una bolletta
-luce/gas: idraulico, TARI, giardiniere, rate condominiali…
+luce/gas: idraulico, TARI, giardiniere, rate condominiali… e anche le
+**entrate** (vedi sotto).
 
-1. Scrivi la **descrizione**: la **categoria viene proposta da sola** in base
+1. Scegli se stai inserendo una **🧾 Spesa** o una **💰 Entrata**.
+2. Scrivi la **descrizione**: la **categoria viene proposta da sola** in base
    alle parole chiave (tutto in locale, nessuna AI e nessuna connessione). Puoi
    sempre cambiarla dal menu.
-2. Metti **importo** e **data**, indica **chi ha pagato**.
-3. Scegli come dividere:
+3. Metti **importo** e **data**, indica **chi ha pagato**.
+4. Scegli come dividere:
    - **Metà** — 50/50;
    - **Percentuali** — scrivi la percentuale di uno, l'altra si completa a 100;
    - **Cifre** — scrivi la cifra di uno, l'altra è il resto dell'importo.
    L'anteprima mostra subito le due quote.
-4. **Aggiungi spesa**. Chi non ha pagato resta in debito della sua quota finché
+5. **Aggiungi spesa**. Chi non ha pagato resta in debito della sua quota finché
    non spunti **Saldata**.
 
 In cima trovi il **saldo di casa**: la freccia indica chi deve a chi, e sotto il
-dettaglio fra spese e bollette non ancora finite nel registro.
+dettaglio fra registro e bollette non ancora finite nel registro.
+
+### Entrate (bonifici GSE, rimborsi)
+
+Quando arrivano dei soldi che spettano a tutti e due — il **bonifico del GSE**
+per il fotovoltaico, un **rimborso IRPEF**, un indennizzo dell'assicurazione —
+si inseriscono nello stesso registro scegliendo **💰 Entrata**.
+
+Funziona come una spesa, al contrario: indichi **chi l'ha ricevuta** e come si
+divide, e la **quota dell'altro scala dal debito**. Se il bonifico GSE di 400 €
+arriva sul conto di Andrea e si divide a metà, i 200 € dei Genitori vengono tolti
+da quello che devono ad Andrea; se il saldo scende sotto zero, la freccia si gira
+e diventa Andrea a dover dare dei soldi ai Genitori.
+
+Le entrate hanno **categorie proprie** (Fotovoltaico, Rimborso tasse, Bonus &
+detrazioni, Rimborsi vari, Affitto), proposte dalla descrizione come per le
+spese: "bonifico GSE" propone ☀️ Fotovoltaico, "rimborso IRPEF" propone
+🏛️ Rimborso tasse. Nell'elenco si riconoscono dall'importo in verde col `+`;
+finché non le spunti **Saldata** restano nel saldo, esattamente come le spese.
+L'importo si scrive sempre **positivo**: è il tipo di riga a dare il verso.
 
 Le spese arrivate da una bolletta hanno il segno 🧾: sono la ripartizione
 calcolata dai contatori, con Andrea come pagante. Spuntarle come saldate segna
@@ -90,7 +112,7 @@ rimandata nel registro.
 La tab **Storico** mostra:
 - il **saldo cumulativo** "Genitori devono ad Andrea €X" (Andrea anticipa le
   bollette; ogni quota resta dovuta finché non la segni **Saldato**), che
-  comprende anche le spese condivise;
+  comprende anche le spese condivise e le entrate del registro;
 - i **totali** per unità;
 - un **grafico** dello split per bolletta e il **€/kWh**.
 

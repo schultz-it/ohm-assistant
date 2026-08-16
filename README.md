@@ -34,8 +34,10 @@ Clicca il badge, oppure manualmente:
   calcolo della ripartizione, allegato PDF, riepilogo stampabile.
 - **Spese**: registro delle spese condivise di casa (idraulico, TARI,
   giardiniere…) con **categoria proposta automaticamente** dalla descrizione e
-  divisione a **metà, per percentuali o per cifre**. Le bollette calcolate si
-  mandano nel registro con un bottone, così il saldo di casa è uno solo.
+  divisione a **metà, per percentuali o per cifre**. Nello stesso registro si
+  inseriscono anche le **entrate** (bonifico GSE del fotovoltaico, rimborsi di
+  tasse…): la quota spettante all'altra unità **scala dal debito**. Le bollette
+  calcolate si mandano nel registro con un bottone, così il saldo di casa è uno solo.
 - **Storico**: totali per unità, grafico dello split per bolletta, €/kWh e
   **saldo cumulativo** (bollette + spese) con spunta "saldato".
 - **Live**: contabilizzatori Andrea/Genitori in tempo reale + fotovoltaico + il

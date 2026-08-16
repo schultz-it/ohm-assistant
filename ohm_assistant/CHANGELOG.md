@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.5.0
+- **Entrate nel registro spese** (SPEC 12bis): i soldi che arrivano e vanno
+  divisi — **bonifico GSE** del fotovoltaico, **rimborso di tasse**, indennizzi —
+  si inseriscono nella tab **Spese** scegliendo **💰 Entrata**. Si compilano come
+  una spesa (chi l'ha incassata, divisione a metà / percentuali / cifre) e la
+  **quota spettante all'altra unità scala dal debito**: 400 € dal GSE incassati
+  da Andrea e divisi a metà tolgono 200 € da quello che devono i Genitori. Se il
+  saldo passa sotto zero la freccia si gira da sola.
+- **Categorie dedicate alle entrate** — Fotovoltaico, Rimborso tasse, Bonus &
+  detrazioni, Rimborsi vari, Affitto — proposte dalla descrizione con lo stesso
+  match locale delle spese ("bonifico GSE" → ☀️ Fotovoltaico, "rimborso IRPEF" →
+  🏛️ Rimborso tasse). Niente AI, niente rete.
+- Spese ed entrate restano **contate separatamente** nei totali (`paid`/`received`,
+  `by_category`/`income_by_category` in `GET /api/expenses/summary`), e il saldo
+  di Storico usa lo stesso calcolo di Spese: i due numeri non possono divergere.
+- API: `kind` (`expense`|`income`) su `GET/POST/PUT /api/expenses` — anche come
+  filtro in elenco — e su `/categories` e `/suggest`. Le righe già in archivio
+  restano spese (migrazione automatica alla partenza).
+
 ## 1.4.3
 - **Corretta la cache che nascondeva le novità dopo un aggiornamento**:
   `index.html` usciva senza header `Cache-Control`, così il browser applicava

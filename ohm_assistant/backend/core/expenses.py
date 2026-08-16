@@ -1,14 +1,23 @@
 """Shared-expense domain logic (SPEC 12): categories and split maths.
 
+The ledger holds two kinds of rows: **expenses** (money going out) and
+**incomes** (money coming in — the GSE transfer for the photovoltaic, a tax
+refund…). They share everything — the split engine, the category matcher, the
+"who fronted it" bookkeeping — and differ only in the sign they carry into the
+balance: an expense paid by one unit puts the other in debt for its share, an
+income cashed by one unit puts *that* unit in debt for the other's share.
+
 Category proposal is deliberately local and deterministic — a keyword match on
-the description, no network call and no API key, so adding an expense stays
-instant and free. The proposal is only ever a suggestion the user can override.
+the description, no network call and no API key, so adding a row stays instant
+and free. The proposal is only ever a suggestion the user can override.
 
 The split engine is pure: it takes the amount, the mode and its config and
 returns the two shares, which always add up to the amount to the cent.
 """
 import re
 import unicodedata
+
+KINDS = ("expense", "income")
 
 # id, label, icon, keywords. Order matters: on a tie the earlier entry wins,
 # and the longest matching keyword wins overall (so "canone rai" beats "rai").
@@ -61,10 +70,53 @@ CATEGORIES: list[dict] = [
     {"id": "altro", "label": "Altro", "icon": "📌", "keywords": []},
 ]
 
-CATEGORY_IDS = {c["id"] for c in CATEGORIES}
+# Categories for incoming money. The ids are distinct from the expense ones
+# (hence ``altra_entrata`` rather than a second ``altro``) so a category never
+# means two different things depending on the row it sits on.
+INCOME_CATEGORIES: list[dict] = [
+    {"id": "fotovoltaico", "label": "Fotovoltaico", "icon": "☀️", "keywords": [
+        "gse", "fotovoltaico", "incentivo", "incentivi", "scambio sul posto",
+        "ritiro dedicato", "conto energia", "energia immessa", "immissione",
+        "cessione energia", "eccedenze"]},
+    {"id": "rimborso_tasse", "label": "Rimborso tasse", "icon": "🏛️", "keywords": [
+        "irpef", "730", "modello 730", "agenzia delle entrate", "agenzia entrate",
+        "rimborso tasse", "rimborso imu", "rimborso tari", "credito irpef",
+        "conguaglio fiscale", "rimborso fiscale", "rimborso irpef"]},
+    {"id": "bonus", "label": "Bonus & detrazioni", "icon": "🎁", "keywords": [
+        "bonus", "superbonus", "ecobonus", "detrazione", "detrazioni",
+        "credito d'imposta", "credito di imposta", "sconto in fattura",
+        "contributo", "sussidio"]},
+    {"id": "rimborso", "label": "Rimborsi vari", "icon": "↩️", "keywords": [
+        "rimborso", "indennizzo", "risarcimento", "storno", "nota di credito",
+        "cauzione", "deposito cauzionale", "sinistro", "reso"],
+     "weak": ["accredito", "restituzione", "conguaglio"]},
+    {"id": "affitto", "label": "Affitto", "icon": "🏠", "keywords": [
+        "affitto", "locazione", "canone di locazione", "inquilino",
+        "cedolare secca"]},
+    {"id": "altra_entrata", "label": "Altro", "icon": "📌", "keywords": []},
+]
+
+CATEGORIES_BY_KIND: dict[str, list[dict]] = {
+    "expense": CATEGORIES, "income": INCOME_CATEGORIES}
 DEFAULT_CATEGORY = "altro"
+DEFAULT_CATEGORY_BY_KIND = {"expense": DEFAULT_CATEGORY, "income": "altra_entrata"}
+CATEGORY_IDS = {c["id"] for c in CATEGORIES}
+INCOME_CATEGORY_IDS = {c["id"] for c in INCOME_CATEGORIES}
 
 SPLIT_MODES = ("equal", "percent", "amount")
+
+
+def normalize_kind(kind: str | None) -> str:
+    """Unknown/missing kind means an expense — the ledger's original meaning."""
+    return kind if kind in KINDS else "expense"
+
+
+def categories_for(kind: str | None = "expense") -> list[dict]:
+    return CATEGORIES_BY_KIND[normalize_kind(kind)]
+
+
+def category_ids(kind: str | None = "expense") -> set[str]:
+    return INCOME_CATEGORY_IDS if normalize_kind(kind) == "income" else CATEGORY_IDS
 
 
 class SplitError(ValueError):
@@ -77,9 +129,9 @@ def _normalize(text: str) -> str:
     return "".join(ch for ch in folded if not unicodedata.combining(ch))
 
 
-def _best_match(text: str, field: str) -> tuple[int, str, str] | None:
+def _best_match(text: str, field: str, cats: list[dict]) -> tuple[int, str, str] | None:
     best: tuple[int, str, str] | None = None  # (keyword length, category, keyword)
-    for cat in CATEGORIES:
+    for cat in cats:
         for kw in cat.get(field, ()):
             # Whole words only, so "gas" does not fire on "gasolio".
             if re.search(rf"\b{re.escape(kw)}\b", text):
@@ -88,12 +140,14 @@ def _best_match(text: str, field: str) -> tuple[int, str, str] | None:
     return best
 
 
-def suggest_category(description: str) -> dict:
+def suggest_category(description: str, kind: str | None = "expense") -> dict:
     """Propose a category from the description. Never fails; falls back to 'altro'."""
+    kind = normalize_kind(kind)
+    cats = CATEGORIES_BY_KIND[kind]
     text = _normalize(description or "")
-    best = _best_match(text, "keywords") or _best_match(text, "weak")
+    best = _best_match(text, "keywords", cats) or _best_match(text, "weak", cats)
     if best is None:
-        return {"category": DEFAULT_CATEGORY, "matched": None}
+        return {"category": DEFAULT_CATEGORY_BY_KIND[kind], "matched": None}
     return {"category": best[1], "matched": best[2]}
 
 
@@ -139,8 +193,23 @@ def compute_shares(amount: float, mode: str, config: dict | None) -> tuple[float
     return andrea, round(amount - andrea, 2)
 
 
-def normalize_category(category: str | None, description: str) -> str:
-    """Keep a known category, otherwise propose one from the description."""
-    if category in CATEGORY_IDS:
+def normalize_category(category: str | None, description: str,
+                       kind: str | None = "expense") -> str:
+    """Keep a category known for this kind, otherwise propose one from the text."""
+    if category in category_ids(kind):
         return category
-    return suggest_category(description)["category"]
+    return suggest_category(description, kind)["category"]
+
+
+def signed_balance(kind: str, paid_by: str, andrea_share: float,
+                   genitori_share: float) -> float:
+    """How much this row moves the balance, positive when Genitori owe Andrea.
+
+    An **expense** leaves the party who did not pay in debt for its own share.
+    An **income** is the mirror image: whoever cashed it is holding the other
+    party's share, so the same numbers come back with the sign flipped — the
+    GSE transfer landing on Andrea's account cuts what Genitori owe him by
+    their quota.
+    """
+    owed = genitori_share if paid_by == "andrea" else -andrea_share
+    return -owed if normalize_kind(kind) == "income" else owed

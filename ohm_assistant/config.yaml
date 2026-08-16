@@ -1,7 +1,7 @@
 name: Ohm Assistant
-version: "1.4.3"
+version: "1.5.0"
 slug: ohm_assistant
-description: Ripartizione bollette luce e gas tra unità abitative (contabilizzatori, Shelly, fotovoltaico) e registro delle spese condivise.
+description: Ripartizione bollette luce e gas tra unità abitative (contabilizzatori, Shelly, fotovoltaico) e registro delle spese e delle entrate condivise.
 url: https://github.com/schultz-it/ohm-assistant
 arch:
   - aarch64
